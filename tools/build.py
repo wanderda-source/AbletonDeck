@@ -106,15 +106,20 @@ connect('scope_record', 0, 'scope_position'); connect('scope_clock', 0, 'scope_p
 box('scope_message', 'prepend scope', 990, 645)
 connect('scope_position', 0, 'scope_message'); connect('scope_message', 0, 'script')
 # Spectrum FFT is calculated in Node from the raw stereo capture.
-comment('heading', 'ABLETON DECK / AUDIO MONITOR', [14, 10, 470, 30], 18, [0.36, 0.9, 0.77, 1])
-comment('readout', 'Waiting for audio…', [14, 45, 465, 24], 13)
-connect('script', 1, 'readout')
-comment('info', 'Place last on Master/Main, after your limiter. Stereo audio passes through unchanged.\nLUFS / Peak / bands / Mid-Side / waveform / stereo scopes.\nIntegrated LUFS (*) is a prototype; control scheduler timing is not sample-exact.', [14, 77, 470, 64], 11)
-comment('help', 'Stream Deck: tap LUFS to change mode; hold LUFS or Peak to reset.\nUse one meter instance per Live Set. Local UDP only: 17941 / 17942.', [14, 145, 470, 38], 11)
+boxes.append({'box': {'id': 'status_panel', 'maxclass': 'jsui',
+                     'filename': 'yfc-panel.js', 'numinlets': 1, 'numoutlets': 0,
+                     'patching_rect': [30, 930, 150, 169], 'presentation': 1,
+                     'presentation_rect': [0, 0, 150, 169], 'border': 0,
+                     'ignoreclick': 1,
+                     'annotation': 'Wander_scope: sends audio analysis to Stream Deck. Place one instance last on Master/Main.'}})
+box('panel_activity', 't b', 270, 930, 45)
+connect('script', 0, 'panel_activity')
+connect('panel_activity', 0, 'status_panel')
 patcher = {'fileversion': 1, 'appversion': {'major': 8, 'minor': 6, 'revision': 5, 'architecture': 'x64', 'modernui': 1},
-           'classnamespace': 'box', 'rect': [80, 100, 1120, 950], 'openinpresentation': 1,
-           'devicewidth': 500, 'bgcolor': [0.063, 0.098, 0.133, 1], 'boxes': boxes, 'lines': lines,
-           'dependency_cache': [{'name': 'yfc-meter.js', 'type': 'TEXT', 'implicit': 1}], 'autosave': 0}
+           'classnamespace': 'box', 'rect': [80, 100, 1120, 1120], 'openinpresentation': 1,
+           'devicewidth': 150, 'bgcolor': [0, 0, 0, 1], 'boxes': boxes, 'lines': lines,
+           'dependency_cache': [{'name': name, 'type': 'TEXT', 'implicit': 1}
+                                for name in ('yfc-meter.js', 'yfc-panel.js')], 'autosave': 0}
 text = json.dumps({'patcher': patcher}, ensure_ascii=False, indent=2)
 (MAX / 'AbletonDeck Meter.maxpat').write_text(text, encoding='utf-8')
 # Standard unfrozen Max Audio Effect AMPF container, with a null-terminated JSON patch.
@@ -123,19 +128,16 @@ header = b'ampf' + struct.pack('<I', 4) + b'aaaa' + b'meta' + struct.pack('<I', 
 (MAX / 'AbletonDeck Meter.amxd').write_bytes(header + b'ptch' + struct.pack('<I', len(payload)) + payload)
 actions = [
     *[(f'spectrum{j}', f'Spectrum {j} / 5') for j in range(1, 6)],
-    ('midside','Mid/Side Balance'), ('waveform','Oscilloscope'), ('vectorscope','Loudness History'), ('spectrogram','Spectrogram'), ('goniometer','Goniometer'),
-    ('lufs','LUFS Meter'), ('peak','Sample Peak'), ('pitch','Frequency → Note'), ('reactive','Audio Reactive'), ('bands','Frequency Visual'), ('reset','Reset Meter'),
-    ('play','Play / Pause'), ('stop','Stop'), ('record','Arrangement Record'), ('sessionrecord','Session Record'),
-    ('loop','Loop'), ('click','Metronome'), ('mute','Selected Track Mute'), ('solo','Selected Track Solo'),
-    ('arm','Selected Track Arm'), ('prev','Previous Track'), ('next','Next Track'), ('scene','Launch Selected Scene'),
-    ('stopclips','Stop All Clips'), ('undo','Undo'), ('redo','Redo'), ('tap','Tap Tempo'), ('overdub','MIDI Overdub')]
+    ('midside','Mid/Side Balance'), ('waveform','Oscilloscope'), ('spectrogram','Spectrogram'), ('goniometer','Goniometer'),
+    ('lufs','LUFS Meter'), ('peak','Sample Peak'), ('pitch','Frequency → Note'), ('reactive','Audio Reactive'),
+    ('play','Play / Pause'), ('click','Metronome')]
 (PLUGIN / 'images').mkdir(exist_ok=True)
 manifest = {
     '$schema': 'https://schemas.elgato.com/streamdeck/plugins/manifest.json',
     'Author': 'Wanderwave', 'Name': 'Wander_scope', 'Description': 'Personal Ableton control, stereo LUFS and audio visuals.',
     'Category': 'Wander_scope', 'CategoryIcon': 'images/category', 'Icon': 'images/plugin',
     'URL': 'https://github.com/wanderda-source/AbletonDeck', 'UUID': 'com.personal.abletondeck',
-    'Version': '0.3.16.0', 'SDKVersion': 2, 'CodePath': 'plugin.cjs', 'Nodejs': {'Version': '20'},
+    'Version': '0.3.22.0', 'SDKVersion': 2, 'CodePath': 'plugin.cjs', 'Nodejs': {'Version': '20'},
     'OS': [{'Platform': 'windows', 'MinimumVersion': '10'}], 'Software': {'MinimumVersion': '6.6'},
     'PropertyInspectorPath': 'settings.html',
     'Actions': [{'UUID': f'com.personal.abletondeck.{kind}', 'Name': name, 'Icon': f'images/{kind}',
