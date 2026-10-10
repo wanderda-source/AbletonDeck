@@ -1,0 +1,48 @@
+name: Build Windows installer
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Build plugin
+        shell: pwsh
+        run: |
+          npm ci
+          if ($LASTEXITCODE -ne 0) { throw 'npm ci failed' }
+          Copy-Item node_modules com.personal.abletondeck.sdPlugin -Recurse -Force
+          python tools/build.py
+          if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed' }
+          node --test tests/*.test.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
+      - name: Compile Windows setup
+        shell: powershell
+        run: .\installer\build.ps1
+      - name: Test installer in isolated folders
+        shell: powershell
+        run: |
+          $taskCompiler = Join-Path ([Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()) 'csc.exe'
+          $taskSetup = (Get-ChildItem dist -Filter 'AbletonDeck-Setup-*.exe').FullName
+          & $taskCompiler /nologo /target:exe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /out:dist\InstallerTests.exe "/reference:$taskSetup" installer\InstallerTests.cs
+          if ($LASTEXITCODE -ne 0) { throw 'Installer test compilation failed' }
+          & .\dist\InstallerTests.exe (Join-Path $env:RUNNER_TEMP 'AbletonDeckInstallerTests')
+          if ($LASTEXITCODE -ne 0) { throw 'Installer tests failed' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AbletonDeck-Windows
+          path: |
+            dist/AbletonDeck-Setup-*.exe
+            dist/SHA256SUMS.txt
+            installer/RELEASE-NOTES.md
