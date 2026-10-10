@@ -56,6 +56,13 @@ class Song:
 
 
 class ControllerTest(unittest.TestCase):
+    def setUp(self):
+        # Never send test commands to a running Live installation.
+        for name in ('COMMAND_PORT', 'STATE_PORT'):
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+                probe.bind(('127.0.0.1', 0))
+                setattr(module, name, probe.getsockname()[1])
+
     def test_main_track_without_mute_solo_keeps_transport_state(self):
         song = Song()
         song.current_song_time = 17.25
@@ -73,7 +80,7 @@ class ControllerTest(unittest.TestCase):
 
     def test_local_udp_commands_and_feedback(self):
         receiver = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        receiver.bind(('127.0.0.1', 17941))
+        receiver.bind(('127.0.0.1', module.STATE_PORT))
         receiver.settimeout(1)
         sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         song = Song()
@@ -81,7 +88,7 @@ class ControllerTest(unittest.TestCase):
         try:
             self.assertIsNotNone(controller._udp)
             for name in ['play', 'mute', 'next', 'arm', 'click']:
-                sender.sendto(json.dumps({'v': 1, 'command': name}).encode(), ('127.0.0.1', 17940))
+                sender.sendto(json.dumps({'v': 1, 'command': name}).encode(), ('127.0.0.1', module.COMMAND_PORT))
             controller.update_display()
             controller.update_display()
             state = json.loads(receiver.recv(4096))
@@ -105,8 +112,8 @@ class ControllerTest(unittest.TestCase):
         sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         controller = module.AbletonDeck(Song())
         try:
-            sender.sendto(b'garbage', ('127.0.0.1',17940))
-            sender.sendto(b'{"v":1,"command":"play"}', ('127.0.0.1',17940))
+            sender.sendto(b'garbage', ('127.0.0.1',module.COMMAND_PORT))
+            sender.sendto(b'{"v":1,"command":"play"}', ('127.0.0.1',module.COMMAND_PORT))
             with self.assertLogs('controller', level='WARNING') as logs:
                 controller.update_display()
             self.assertTrue(controller.song.is_playing)

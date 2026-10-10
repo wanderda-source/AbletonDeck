@@ -19,3 +19,15 @@ test('spectrogram scrolls through silence and gaps; freeze snapshots stay immuta
 test('oscilloscope retains a visible zero line in silence',()=>{
  assert.match(render('waveform',{}, {peak:-120},{scope:true,audio:true}),/M8 72H136" stroke="#777777"/);
 });
+test('expanded tiles stitch exactly to the detailed frame, including seams and frequency order',()=>{
+ const s=new Spectrogram({width:360,height:216,step:50});
+ for(let t=0;t<360;t++){s.receive(Array.from({length:480},(_,i)=>-84+72*((i+t)%480)/480),1000+t*50);s.tick(1000+t*50,false,true);}
+ const full=pixels(s.snapshot('red'));
+ assert.equal(s.columns.length,360);assert.equal(s.columns[0].length,216);
+ for(let y=0;y<3;y++)for(let x=0;x<5;x++){
+  const tile=pixels({png:s.tile(x,y,'red')});
+  for(let row=0;row<72;row++)assert.deepEqual(tile.subarray(row*217+1,row*217+217),full.subarray((y*72+row)*1081+1+x*216,(y*72+row)*1081+1+x*216+216));
+ }
+ assert.throws(()=>s.tile(5,0),RangeError);
+ const before=s.tile(4,2);s.tick(20000,true,true);assert.notEqual(s.tile(4,2),before);
+});

@@ -1,6 +1,18 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {Spectrum,renderSpectrum,frequency}=require('../com.personal.abletondeck.sdPlugin/spectrum.cjs');
+test('expanded spectrum retains calibrated dB positions and identical curves across vertical seams',()=>{
+  const data={mode:'fft',level:Array(480).fill(-42),peak:Array(480).fill(-24),strongest:{hz:1000,db:-42}};
+  for(let panel=0;panel<5;panel++){
+    const tiles=[0,1,2].map(row=>renderSpectrum(panel,data,{expanded:true,row,connected:true}));
+    const contours=tiles.map(s=>s.match(/<path data-spectrum="contour"[^>]+>/)[0]);
+    assert.equal(contours[0],contours[1]);assert.equal(contours[1],contours[2]);
+    assert.match(contours[0],/215\.00/); // -42 dB halfway between -84 and 0.
+    tiles.forEach((s,row)=>{assert.match(s,new RegExp(`viewBox="${panel*144} ${row*144} 144 144"`));assert.doesNotMatch(s,/NaN|undefined|Infinity/);});
+    assert.match(tiles[2],/y="428"/);
+  }
+  assert.throws(()=>renderSpectrum(0,data,{expanded:true,row:3}),RangeError);
+});
 test('panorama uses contiguous logarithmic bands and common gain across all five keys',()=>{
   assert.equal(frequency(0),25);assert.equal(frequency(60),20000);
   for(let j=1;j<60;j++)assert.ok(frequency(j)>frequency(j-1));

@@ -79,13 +79,26 @@ test('actual plugin process registers, renders audio, sends commands and resets 
     for(let j=1;j<=5;j++)emit('willAppear','spectrum'+j,{settings:{}});
     sendOSC('/yfc/spectrum',Array(60).fill(-30));await delay(150);
     for(let j=1;j<=5;j++)assert.match(svg('spectrum'+j),/data-spectrum="contour"/);
-    emit('keyDown','spectrum1');emit('keyUp','spectrum1');await delay(80);
+    emit('keyDown','spectrum1');await delay(700);emit('keyUp','spectrum1');await delay(80);
     const frozenImages=Array.from({length:5},(_,j)=>svg('spectrum'+(j+1)));
     frozenImages.forEach(v=>assert.match(v,/data-frozen="true"/));
     sendOSC('/yfc/spectrum',Array(60).fill(-60));await delay(100);
     assert.deepEqual(Array.from({length:5},(_,j)=>svg('spectrum'+(j+1))),frozenImages);
-    emit('keyDown','spectrum5');emit('keyUp','spectrum5');await delay(80);
+    emit('keyDown','spectrum5');await delay(700);emit('keyUp','spectrum5');await delay(80);
     for(let j=1;j<=5;j++)assert.doesNotMatch(svg('spectrum'+j),/data-frozen="true"/);
+    ws.send(JSON.stringify({event:'willAppear',context:'spectrum1',device:'standard-deck',action:'com.personal.abletondeck.spectrum1',payload:{settings:{theme:'blue'}}}));
+    emit('keyDown','spectrum1');emit('keyUp','spectrum1');await delay(80);
+    assert.deepEqual(messages.filter(m=>m.event==='switchToProfile').at(-1).payload,{profile:'profiles/Wander_scope Spectrum'});
+    for(let y=0;y<3;y++)for(let x=0;x<5;x++)ws.send(JSON.stringify({event:'willAppear',context:`spectrumTile${x}${y}`,device:'standard-deck',action:`com.personal.abletondeck.spectrum${x+1}`,payload:{settings:{expanded:true,tileY:y}}}));
+    await delay(160);
+    for(let y=0;y<3;y++)for(let x=0;x<5;x++){
+      const image=messages.filter(m=>m.event==='setImage'&&m.context===`spectrumTile${x}${y}`).at(-1).payload.image;
+      assert.match(image,/^data:image\/png;base64,/);
+      const png=Buffer.from(image.split(',')[1],'base64');assert.equal(png.readUInt32BE(16),72);assert.equal(png.readUInt32BE(20),72);
+    }
+    ws.send(JSON.stringify({event:'keyDown',context:'spectrumTile42'}));ws.send(JSON.stringify({event:'keyUp',context:'spectrumTile42'}));await delay(80);
+    assert.deepEqual(messages.filter(m=>m.event==='switchToProfile').at(-1).payload,{});
+    for(let y=0;y<3;y++)for(let x=0;x<5;x++)ws.send(JSON.stringify({event:'willDisappear',context:`spectrumTile${x}${y}`}));
     await delay(1850);
     assert.match(svg('lufs'),/data-value="0.0"/);
     assert.doesNotMatch(svg('pitch'),/data-pitch|data-idle/);
@@ -106,9 +119,18 @@ test('actual plugin process registers, renders audio, sends commands and resets 
     assert.match(svg('spectrum3'),/frequency-peak/);
     assert.match(svg('spectrum3'),/1000 Hz/);
     assert.match(svg('spectrogram'),/data-spectrogram/);
+    ws.send(JSON.stringify({event:'willAppear',context:'spectrogram',device:'standard-deck',action:'com.personal.abletondeck.spectrogram',payload:{settings:{theme:'red'}}}));
     emit('keyDown','spectrogram');emit('keyUp','spectrogram');await delay(80);
-    const frozenSpectrogram=svg('spectrogram');await delay(150);assert.equal(svg('spectrogram'),frozenSpectrogram);
-    emit('keyDown','spectrogram');emit('keyUp','spectrogram');await delay(80);assert.doesNotMatch(svg('spectrogram'),/data-frozen/);
+    assert.deepEqual(messages.filter(m=>m.event==='switchToProfile').at(-1).payload,{profile:'profiles/Wander_scope Spectrogram'});
+    for(let y=0;y<3;y++)for(let x=0;x<5;x++)ws.send(JSON.stringify({event:'willAppear',context:`tile${x}${y}`,device:'standard-deck',action:'com.personal.abletondeck.spectrogram',payload:{settings:{expanded:true,tileX:x,tileY:y}}}));
+    await delay(160);
+    for(let y=0;y<3;y++)for(let x=0;x<5;x++){
+      const image=messages.filter(m=>m.event==='setImage'&&m.context===`tile${x}${y}`).at(-1).payload.image;
+      assert.match(image,/^data:image\/png;base64,/);const png=Buffer.from(image.split(',')[1],'base64');assert.equal(png.readUInt32BE(16),72);assert.equal(png.readUInt32BE(20),72);
+    }
+    ws.send(JSON.stringify({event:'keyDown',context:'tile42'}));ws.send(JSON.stringify({event:'keyUp',context:'tile42'}));await delay(80);
+    const back=messages.filter(m=>m.event==='switchToProfile').at(-1);assert.equal(back.device,'standard-deck');assert.deepEqual(back.payload,{});
+    for(let y=0;y<3;y++)for(let x=0;x<5;x++)ws.send(JSON.stringify({event:'willDisappear',context:`tile${x}${y}`}));
     for(const session of [100,200]){
       const hz=session===100?1000:2000;
       const samples=Array.from({length:16384*2},(_,j)=>.1*Math.sin(2*Math.PI*hz*Math.floor(j/2)/48000));
