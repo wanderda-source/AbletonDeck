@@ -2,6 +2,7 @@
 import json
 import struct
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -137,9 +138,11 @@ manifest = {
     'Author': 'Wanderwave', 'Name': 'Wander_scope', 'Description': 'Personal Ableton control, stereo LUFS and audio visuals.',
     'Category': 'Wander_scope', 'CategoryIcon': 'images/category', 'Icon': 'images/plugin',
     'URL': 'https://github.com/wanderda-source/AbletonDeck', 'UUID': 'com.personal.abletondeck',
-    'Version': '0.3.22.0', 'SDKVersion': 2, 'CodePath': 'plugin.cjs', 'Nodejs': {'Version': '20'},
+    'Version': '0.3.23.0', 'SDKVersion': 2, 'CodePath': 'plugin.cjs', 'Nodejs': {'Version': '20'},
     'OS': [{'Platform': 'windows', 'MinimumVersion': '10'}], 'Software': {'MinimumVersion': '6.6'},
     'PropertyInspectorPath': 'settings.html',
+    'Profiles': [{'Name': 'profiles/Wander_scope HUD', 'DeviceType': 0, 'Readonly': False,
+                  'AutoInstall': True, 'DontAutoSwitchWhenInstalled': True}],
     'Actions': [{'UUID': f'com.personal.abletondeck.{kind}', 'Name': name, 'Icon': f'images/{kind}',
                  'Tooltip': name, 'Controllers': ['Keypad'], 'DisableAutomaticStates': True,
                  'States': [{'Image': f'images/{kind}', 'TitleAlignment': 'middle', 'FontSize': 12}]} for kind, name in actions]
@@ -155,3 +158,4 @@ for kind, name in actions + [('plugin', 'Wander_scope')]:
 (PLUGIN / 'images' / 'category.svg').write_text((PLUGIN / 'images' / 'plugin.svg').read_text(encoding='utf-8'), encoding='utf-8')
 print(f'Generated {len(actions)} Stream Deck actions; {len(boxes)} Max objects; AMXD {len(payload)+32} bytes.')
 subprocess.run(['node', str(ROOT / 'tools' / 'icons.cjs')], check=True)
+subprocess.run([sys.executable, str(ROOT / 'tools' / 'build-profile.py')], check=True)
