@@ -37,6 +37,20 @@ function remember(kind){
 }
 const argv = process.argv.slice(2);
 function arg(k) { return argv[argv.indexOf(k) + 1]; }
+let initialDevices=[],globalSettingsLoaded=false;
+try{initialDevices=JSON.parse(arg('-info')).devices||[];}catch(_){}
+function openHUD(device){
+  if(!device)return;
+  websocket.send(JSON.stringify({event:'switchToProfile',context:arg('-pluginUUID'),device,payload:{profile:'profiles/Wander_scope HUD'}}));
+}
+function offerHUD(){
+  if(!globalSettingsLoaded||globalSettings.hudOffered)return;
+  const device=initialDevices.find(d=>d.type===0);
+  if(!device)return;
+  globalSettings.hudOffered=true;
+  send('setGlobalSettings',arg('-pluginUUID'),globalSettings);
+  openHUD(device.id);
+}
 const contexts = new Map();
 const inspectors=new Set();
 function notifyAppearance(){for(const context of inspectors)send('sendToPropertyInspector',context,{type:'appearance',settings:globalSettings});}
@@ -166,11 +180,13 @@ if (arg('-port') && arg('-pluginUUID')) {
       if(msg.event==='propertyInspectorDidAppear'){inspectors.add(msg.context);notifyAppearance();}
       else if(msg.event==='propertyInspectorDidDisappear'){inspectors.delete(msg.context);}
       else if(msg.event==='sendToPlugin'&&msg.payload?.type==='appearanceQuery'){inspectors.add(msg.context);notifyAppearance();}
-      else if(msg.event==='didReceiveGlobalSettings'){updateGlobal(msg.payload.settings||{});notifyAppearance();}
+      else if(msg.event==='didReceiveGlobalSettings'){globalSettingsLoaded=true;updateGlobal(msg.payload.settings||{});offerHUD();notifyAppearance();}
+      else if(msg.event==='deviceDidConnect'){initialDevices.push({id:msg.device,...msg.deviceInfo});offerHUD();}
+      else if(msg.event==='sendToPlugin'&&msg.payload?.type==='openHUD'){openHUD(contexts.get(msg.context)?.device);}
       else if(msg.event==='sendToPlugin'&&msg.payload?.type==='appearance'){
         updateGlobal(msg.payload.settings||{});send('setGlobalSettings',arg('-pluginUUID'),globalSettings);notifyAppearance();
       }else if (msg.event === 'willAppear') {
-        contexts.set(msg.context, { kind: msg.action.split('.').pop(), settings: msg.payload.settings || {} });
+        contexts.set(msg.context, { device:msg.device,kind: msg.action.split('.').pop(), settings: msg.payload.settings || {} });
       } else if (msg.event === 'willDisappear') contexts.delete(msg.context);
       else if (msg.event === 'didReceiveSettings') {
         const entry = contexts.get(msg.context);

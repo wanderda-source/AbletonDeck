@@ -8,7 +8,7 @@
   "Icon": "images/plugin",
   "URL": "https://github.com/wanderda-source/AbletonDeck",
   "UUID": "com.personal.abletondeck",
-  "Version": "0.3.22.0",
+  "Version": "0.3.23.0",
   "SDKVersion": 2,
   "CodePath": "plugin.cjs",
   "Nodejs": {
@@ -24,6 +24,15 @@
     "MinimumVersion": "6.6"
   },
   "PropertyInspectorPath": "settings.html",
+  "Profiles": [
+    {
+      "Name": "profiles/Wander_scope HUD",
+      "DeviceType": 0,
+      "Readonly": false,
+      "AutoInstall": true,
+      "DontAutoSwitchWhenInstalled": true
+    }
+  ],
   "Actions": [
     {
       "UUID": "com.personal.abletondeck.spectrum1",
