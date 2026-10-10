@@ -11,3 +11,5 @@ meter-connection.json
 *.streamDeckPlugin
 *.exe
 payload.zip
+
+VST3/
