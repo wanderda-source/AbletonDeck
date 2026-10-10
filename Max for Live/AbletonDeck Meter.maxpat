@@ -13,14 +13,14 @@
       80,
       100,
       1120,
-      950
+      1120
     ],
     "openinpresentation": 1,
-    "devicewidth": 500,
+    "devicewidth": 150,
     "bgcolor": [
-      0.063,
-      0.098,
-      0.133,
+      0,
+      0,
+      0,
       1
     ],
     "boxes": [
@@ -1335,109 +1335,39 @@
       },
       {
         "box": {
-          "id": "heading",
-          "maxclass": "comment",
-          "text": "ABLETON DECK / AUDIO MONITOR",
+          "id": "status_panel",
+          "maxclass": "jsui",
+          "filename": "yfc-panel.js",
+          "numinlets": 1,
+          "numoutlets": 0,
           "patching_rect": [
-            14,
-            10,
-            470,
-            30
+            30,
+            930,
+            150,
+            169
           ],
           "presentation": 1,
           "presentation_rect": [
-            14,
-            10,
-            470,
-            30
+            0,
+            0,
+            150,
+            169
           ],
-          "fontsize": 18,
-          "textcolor": [
-            0.36,
-            0.9,
-            0.77,
-            1
-          ]
+          "border": 0,
+          "ignoreclick": 1,
+          "annotation": "Wander_scope: sends audio analysis to Stream Deck. Place one instance last on Master/Main."
         }
       },
       {
         "box": {
-          "id": "readout",
-          "maxclass": "comment",
-          "text": "Waiting for audio…",
+          "id": "panel_activity",
+          "maxclass": "newobj",
+          "text": "t b",
           "patching_rect": [
-            14,
+            270,
+            930,
             45,
-            465,
-            24
-          ],
-          "presentation": 1,
-          "presentation_rect": [
-            14,
-            45,
-            465,
-            24
-          ],
-          "fontsize": 13,
-          "textcolor": [
-            0.84,
-            0.9,
-            0.96,
-            1
-          ]
-        }
-      },
-      {
-        "box": {
-          "id": "info",
-          "maxclass": "comment",
-          "text": "Place last on Master/Main, after your limiter. Stereo audio passes through unchanged.\nLUFS / Peak / bands / Mid-Side / waveform / stereo scopes.\nIntegrated LUFS (*) is a prototype; control scheduler timing is not sample-exact.",
-          "patching_rect": [
-            14,
-            77,
-            470,
-            64
-          ],
-          "presentation": 1,
-          "presentation_rect": [
-            14,
-            77,
-            470,
-            64
-          ],
-          "fontsize": 11,
-          "textcolor": [
-            0.84,
-            0.9,
-            0.96,
-            1
-          ]
-        }
-      },
-      {
-        "box": {
-          "id": "help",
-          "maxclass": "comment",
-          "text": "Stream Deck: tap LUFS to change mode; hold LUFS or Peak to reset.\nUse one meter instance per Live Set. Local UDP only: 17941 / 17942.",
-          "patching_rect": [
-            14,
-            145,
-            470,
-            38
-          ],
-          "presentation": 1,
-          "presentation_rect": [
-            14,
-            145,
-            470,
-            38
-          ],
-          "fontsize": 11,
-          "textcolor": [
-            0.84,
-            0.9,
-            0.96,
-            1
+            22
           ]
         }
       }
@@ -3367,10 +3297,22 @@
         "patchline": {
           "source": [
             "script",
-            1
+            0
           ],
           "destination": [
-            "readout",
+            "panel_activity",
+            0
+          ]
+        }
+      },
+      {
+        "patchline": {
+          "source": [
+            "panel_activity",
+            0
+          ],
+          "destination": [
+            "status_panel",
             0
           ]
         }
@@ -3379,6 +3321,11 @@
     "dependency_cache": [
       {
         "name": "yfc-meter.js",
+        "type": "TEXT",
+        "implicit": 1
+      },
+      {
+        "name": "yfc-panel.js",
         "type": "TEXT",
         "implicit": 1
       }
