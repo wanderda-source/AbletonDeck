@@ -15,7 +15,7 @@ function themeName(value,fallback='orange'){
 }
 function resolveTheme(local,global){return themeName(local,themeName(global));}
 function nextTheme(value){return THEME_ORDER[(THEME_ORDER.indexOf(themeName(value))+1)%THEME_ORDER.length];}
-function applyTheme(svg,name,{visual=false}={}){
+function applyTheme(svg,name,{visual=false,height=144}={}){
   name=themeName(name);
   const palette=PALETTES[name],accent=palette.accent;
   if(palette.stops){
@@ -31,7 +31,7 @@ function applyTheme(svg,name,{visual=false}={}){
     svg=svg.replace(new RegExp('<g\\b[^>]*color="'+accent+'"[^>]*>[\\s\\S]*?<\\/g>','g'),g=>g.replace(/(fill|stroke)="currentColor"/g,'$1="url(#ws-icon)"'));
     if(visual)svg=svg.replace(/stroke="(?:#dedede|#ffffff)"/g,'stroke="url(#ws-accent)"');
     const gradient=(id,height)=>`<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="${height}"><stop stop-color="${stops[0]}"/><stop offset=".5" stop-color="${stops[1]}"/><stop offset="1" stop-color="${stops[2]}"/></linearGradient>`;
-    return svg.replace(/<svg\b[^>]*>/,root=>root+'<defs>'+gradient('ws-accent',144)+gradient('ws-icon',24)+'</defs>');
+    return svg.replace(/<svg\b[^>]*>/,root=>root+'<defs>'+gradient('ws-accent',height)+gradient('ws-icon',24)+'</defs>');
   }
   svg=svg.replaceAll('#f25623',accent);
   // Only graph strokes change hue. Numeric glyph fills and text stay white.

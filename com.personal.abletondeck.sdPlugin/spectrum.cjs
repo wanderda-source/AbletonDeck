@@ -58,9 +58,13 @@ class Spectrum {
 }
 function renderSpectrum(panel,data={},opts={}){
   const offset=panel*144;
+  const expanded=opts.expanded===true,row=expanded?opts.row:0;
+  if(expanded&&(!Number.isInteger(row)||row<0||row>2))throw new RangeError('Invalid spectrum row');
+  const bottom=expanded?410:126;
+  const floor=expanded?410:(data.mode==='fft'?126:138);
   let body='';
   const precise=data.mode==='fft';
-  const y=db=>precise?126-Math.max(0,Math.min(112,(db+84)/84*112)):138-Math.max(0,Math.min(128,(db+12+72)/72*128));
+  const y=db=>expanded?bottom-Math.max(0,Math.min(390,(db+84)/84*390)):precise?126-Math.max(0,Math.min(112,(db+84)/84*112)):138-Math.max(0,Math.min(128,(db+12+72)/72*128));
   const axis=()=>{
     let axis='';
     for(const db of [0,-24,-48,-72]){
@@ -71,38 +75,38 @@ function renderSpectrum(panel,data={},opts={}){
       const x=720*Math.log(hz/20)/Math.log(1000);
       if(x>=offset&&x<=offset+144){
         const tx=Math.max(offset+9,Math.min(offset+135,x));
-        axis+=`<path d="M${x.toFixed(2)} 14V126" stroke="#181818" stroke-width=".6"/><text x="${tx.toFixed(2)}" y="140" text-anchor="middle" font-family="Arial" font-size="11" fill="#999">${hz>=1000?(hz/1000)+'k':hz}</text>`;
+        axis+=`<path d="M${x.toFixed(2)} 14V${bottom}" stroke="#181818" stroke-width=".6"/><text x="${tx.toFixed(2)}" y="${expanded?428:140}" text-anchor="middle" font-family="Arial" font-size="11" fill="#999">${hz>=1000?(hz/1000)+'k':hz}</text>`;
       }
     }
     return axis;
   };
-  if(precise)body+=axis();
+  if(precise||expanded)body+=axis();
   if(!opts.connected){
-    body=idle(false,offset);
+    body=expanded?axis():idle(false,offset);
   }else if(opts.silent||!data.level?.some(v=>v>-110)){
-    body+=`<path data-spectrum="silence" d="M${offset} ${precise?126:138}H${offset+144}" fill="none" stroke="#333333" stroke-width="1"/>`;
+    body+=`<path data-spectrum="silence" d="M${offset} ${floor}H${offset+144}" fill="none" stroke="#333333" stroke-width="1"/>`;
   }else{
-    body+=`<defs><linearGradient id="spectrum${panel}" gradientUnits="userSpaceOnUse" x1="0" y1="8" x2="0" y2="144"><stop stop-color="#f25623" stop-opacity="0.65"/><stop offset="0.6" stop-color="#f25623" stop-opacity="0.12"/><stop offset="1" stop-color="#f25623" stop-opacity="0"/></linearGradient></defs>`;
+    body+=`<defs><linearGradient id="spectrum${panel}" gradientUnits="userSpaceOnUse" x1="0" y1="8" x2="0" y2="${expanded?432:144}"><stop stop-color="#f25623" stop-opacity="0.65"/><stop offset="0.6" stop-color="#f25623" stop-opacity="0.12"/><stop offset="1" stop-color="#f25623" stop-opacity="0"/></linearGradient></defs>`;
     // Shared global coordinates; retain neighbors outside each key for seamless curves.
     const count=data.level.length;
     const contour=values=>{
-      const first=precise?Math.max(0,Math.floor(panel*count/5)-2):0,last=precise?Math.min(count,Math.ceil((panel+1)*count/5)+2):count;
+      const first=precise||expanded?Math.max(0,Math.floor(panel*count/5)-2):0,last=precise||expanded?Math.min(count,Math.ceil((panel+1)*count/5)+2):count;
       const points=Array.from({length:last-first},(_,k)=>{const j=first+k;return [(j+.5)*720/count,y(values?.[j]??-120)];});
       if(first===0)points.unshift([0,y(values?.[0]??-120)]);
       if(last===count)points.push([720,y(values?.[count-1]??-120)]);
       return curvePath(points);
     };
     const current=contour(data.level);
-    body+=`<path data-spectrum="fill" d="${current} L${offset+148} ${precise?126:138}L${offset-4} ${precise?126:138}Z" fill="url(#spectrum${panel})"/><path data-spectrum="peak" d="${contour(data.peak)}" fill="none" stroke="#dedede" stroke-opacity="0.22" stroke-width="0.8"/><path data-spectrum="contour" d="${current}" fill="none" stroke="#ffffff" stroke-width="1.25"/>`;
+    body+=`<path data-spectrum="fill" d="${current} L${offset+148} ${floor}L${offset-4} ${floor}Z" fill="url(#spectrum${panel})"/><path data-spectrum="peak" d="${contour(data.peak)}" fill="none" stroke="#dedede" stroke-opacity="0.22" stroke-width="0.8"/><path data-spectrum="contour" d="${current}" fill="none" stroke="#ffffff" stroke-width="${expanded?1.8:1.25}"/>`;
     if(precise&&data.strongest&&data.strongest.db>-84){
       const peak=data.strongest,x=720*Math.log(peak.hz/20)/Math.log(1000);
       if(x>=offset&&x<offset+144){
         const tx=Math.max(offset+42,Math.min(offset+102,x));
-        body+=`<path data-spectrum="frequency-peak" d="M${x.toFixed(2)} 38V126" stroke="#f25623" stroke-opacity=".35" stroke-width=".7"/>`+numericText(`${Math.round(peak.hz)} Hz`,24,14,{x:tx,align:'middle',maxWidth:90})+`<text x="${tx.toFixed(2)}" y="37" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">${peak.db.toFixed(1)} dBFS</text>`;
+        body+=`<path data-spectrum="frequency-peak" d="M${x.toFixed(2)} 38V${bottom}" stroke="#f25623" stroke-opacity=".35" stroke-width=".7"/>`+numericText(`${Math.round(peak.hz)} Hz`,24,14,{x:tx,align:'middle',maxWidth:90})+`<text x="${tx.toFixed(2)}" y="37" text-anchor="middle" font-family="Arial" font-size="10" fill="#999">${peak.db.toFixed(1)} dBFS</text>`;
       }
     }
     if(opts.frozen)body+=`<g data-frozen="true" fill="#dedede"><rect x="${offset+121}" y="9" width="3" height="9"/><rect x="${offset+127}" y="9" width="3" height="9"/></g>`;
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="${offset} 0 144 144"><rect x="${offset}" width="144" height="144" fill="#000000"/>${body}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="${offset} ${row*144} 144 144"${expanded?' data-expanded-spectrum="true"':''}><rect x="${offset}" y="${row*144}" width="144" height="144" fill="#000000"/>${body}</svg>`;
 }
 module.exports={Spectrum,renderSpectrum,isSpectrum,frequency,COUNT,curvePath};

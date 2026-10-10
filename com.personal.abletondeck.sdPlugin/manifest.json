@@ -8,7 +8,7 @@
   "Icon": "images/plugin",
   "URL": "https://github.com/wanderda-source/AbletonDeck",
   "UUID": "com.personal.abletondeck",
-  "Version": "0.3.23.0",
+  "Version": "0.4.0.0",
   "SDKVersion": 2,
   "CodePath": "plugin.cjs",
   "Nodejs": {
@@ -18,6 +18,10 @@
     {
       "Platform": "windows",
       "MinimumVersion": "10"
+    },
+    {
+      "Platform": "mac",
+      "MinimumVersion": "13"
     }
   ],
   "Software": {
@@ -29,6 +33,20 @@
       "Name": "profiles/Wander_scope HUD",
       "DeviceType": 0,
       "Readonly": false,
+      "AutoInstall": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/Wander_scope Spectrogram",
+      "DeviceType": 0,
+      "Readonly": true,
+      "AutoInstall": true,
+      "DontAutoSwitchWhenInstalled": true
+    },
+    {
+      "Name": "profiles/Wander_scope Spectrum",
+      "DeviceType": 0,
+      "Readonly": true,
       "AutoInstall": true,
       "DontAutoSwitchWhenInstalled": true
     }
@@ -223,9 +241,9 @@
     },
     {
       "UUID": "com.personal.abletondeck.pitch",
-      "Name": "Frequency \u2192 Note",
+      "Name": "Frequency → Note",
       "Icon": "images/pitch",
-      "Tooltip": "Frequency \u2192 Note",
+      "Tooltip": "Frequency → Note",
       "Controllers": [
         "Keypad"
       ],

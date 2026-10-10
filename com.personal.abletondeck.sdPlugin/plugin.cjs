@@ -5,6 +5,8 @@ const path = require('node:path');
 const { render, decodeOSC, encodeOSC, fresh, scopeFromValues, VISUAL_ACTIONS } = require('./shared.cjs');
 const {Spectrum,renderSpectrum,isSpectrum}=require('./spectrum.cjs');
 const spectrum=new Spectrum();
+const {SpectrumRaster}=require('./spectrum-raster.cjs');
+const spectrumRaster=new Map();
 const {resolveTheme,nextTheme,themeName,applyTheme}=require('./themes.cjs');
 const {renderDue,nativeImage}=require('./performance.cjs');
 let globalSettings={theme:'orange',performance:'smooth'};
@@ -12,6 +14,9 @@ function invalidate(){for(const entry of contexts.values())entry.nextRender=0;}
 function updateGlobal(value){globalSettings={...globalSettings,...value,theme:themeName(value.theme??globalSettings.theme),performance:value.performance==='economy'?'economy':'smooth'};invalidate();}
 const {Spectrogram}=require('./spectrogram.cjs');
 const spectrogram=new Spectrogram();
+const expandedSpectrogram=new Spectrogram({width:360,height:216,step:50});
+const expandedThemes=new Map();
+const expandedSpectrumNext=new Map();
 const spectrogramGate=new (require('./display.cjs').DisplayGate)();
 const {FFTFrames,StereoFFT}=require('./fft.cjs');
 const fftFrames=new FFTFrames(),fft=new StereoFFT();let fftTime=0;
@@ -42,6 +47,16 @@ try{initialDevices=JSON.parse(arg('-info')).devices||[];}catch(_){}
 function openHUD(device){
   if(!device)return;
   websocket.send(JSON.stringify({event:'switchToProfile',context:arg('-pluginUUID'),device,payload:{profile:'profiles/Wander_scope HUD'}}));
+}
+function switchSpectrogram(entry,expanded){
+  if(!entry.device)return;
+  if(expanded)expandedThemes.set(entry.device,resolveTheme(entry.settings.theme,globalSettings.theme));
+  if(websocket?.readyState===WebSocket.OPEN)websocket.send(JSON.stringify({event:'switchToProfile',context:arg('-pluginUUID'),device:entry.device,payload:expanded?{profile:'profiles/Wander_scope Spectrogram'}:{}}));
+}
+function switchSpectrum(entry,expanded){
+  if(!entry.device)return;
+  if(expanded)expandedThemes.set(entry.device+' spectrum',resolveTheme(entry.settings.theme,globalSettings.theme));
+  if(websocket?.readyState===WebSocket.OPEN)websocket.send(JSON.stringify({event:'switchToProfile',context:arg('-pluginUUID'),device:entry.device,payload:expanded?{profile:'profiles/Wander_scope Spectrum'}:{}}));
 }
 function offerHUD(){
   if(!globalSettingsLoaded||globalSettings.hudOffered)return;
@@ -88,6 +103,7 @@ udp.on('message', (buf, rinfo) => {
         if(frame&&[...contexts.values()].some(e=>isSpectrum(e.kind)||e.kind==='spectrogram')){const result=fft.analyze(frame.samples,frame.rate);if(result){
           spectrum.receive(result.values,Date.now(),result);
           spectrogram.receive(result.values,Date.now());
+          expandedSpectrogram.receive(result.values,Date.now());
           if(!fftTime&&!process.env.ABLETONDECK_TEST_PORT_BASE){
             try{fs.writeFileSync(path.join(__dirname,'fft-diagnostics.json'),JSON.stringify({mode:'fft',rate:frame.rate,points:result.values.length,binHz:result.binHz,windowMs:result.windowMs,receivedAt:new Date().toISOString()}));}catch(e){log(e);}
           }
@@ -103,7 +119,7 @@ udp.on('message', (buf, rinfo) => {
         if(now-pitchTime>=90){pitch=detectPitch(samples,rate);pitchTime=now;}
         meter={...meter,pitch,triggerWave:triggerScope.receive(samples,rate,pitch?.hz)};rawWaveTime=now;remember('pitch');
       }else if (msg.address === '/yfc/spectrum') {
-        if(!fresh(fftTime)&&spectrum.receive(msg.values)){spectrogram.receive(msg.values);remember('spectrum');}
+        if(!fresh(fftTime)&&spectrum.receive(msg.values)){spectrogram.receive(msg.values);expandedSpectrogram.receive(msg.values);remember('spectrum');}
       } else if (msg.address === '/yfc/scope') {
         const scope = scopeFromValues(msg.values);
         if (!scope) return;
@@ -139,9 +155,40 @@ function redraw() {
   }
   meter={...meter,history:history.tick(fresh(meterTime,now)?meter:{},known.audio===true,now,DEFAULT_GATE),historyTime:now};
   spectrum.tick(now);
-  if([...contexts.values()].some(e=>e.kind==='spectrogram'))spectrogram.tick(now,spectrogramGate.update(fresh(meterTime)?meter.peak:NaN,DEFAULT_GATE),true);
+  if([...contexts.values()].some(e=>e.kind==='spectrogram')){
+    const silent=spectrogramGate.update(fresh(meterTime)?meter.peak:NaN,DEFAULT_GATE);
+    spectrogram.tick(now,silent,true);expandedSpectrogram.tick(now,silent,true);
+  }
+  const rasterFrames=new Map();
   for (const [context, entry] of contexts) {
-    if(!renderDue(entry,now,globalSettings.performance))continue;
+    const expandedSpectrum=isSpectrum(entry.kind)&&entry.settings.expanded===true;
+    if(expandedSpectrum){
+      // All tiles on one device must use the same spectrum snapshot and frame clock.
+      if(now<(expandedSpectrumNext.get(entry.device)||0)||websocket?.bufferedAmount>128*1024)continue;
+    }else if(!renderDue(entry,now,globalSettings.performance))continue;
+    if(expandedSpectrum){
+      const row=entry.settings.tileY,col=Number(entry.kind.slice(-1))-1;
+      if(!Number.isInteger(row)||row<0||row>2)continue;
+      if(!rasterFrames.has(entry.device)){
+        const silent=(entry.displayGate??=new DisplayGate()).update(fresh(meterTime)?meter.peak:NaN,gateThreshold(entry.settings.gateDb));
+        const theme=expandedThemes.get(entry.device+' spectrum')||resolveTheme(entry.settings.theme,globalSettings.theme);
+        if(!spectrumRaster.has(entry.device))spectrumRaster.set(entry.device,new SpectrumRaster());
+        rasterFrames.set(entry.device,spectrumRaster.get(entry.device).render(spectrum.snapshot(),theme,!spectrum.frozen&&((known.audio===true&&silent)||!fresh(spectrum.time))));
+      }
+      const image=rasterFrames.get(entry.device)[row*5+col];
+      if(image!==entry.lastImage){entry.lastImage=image;send('setImage',context,{image,target:0});}
+      if(!entry.titleCleared){send('setTitle',context,{title:'',target:0});entry.titleCleared=true;}
+      continue;
+    }
+    if(entry.kind==='spectrogram'&&entry.settings.expanded===true){
+      const x=entry.settings.tileX,y=entry.settings.tileY;
+      if(!Number.isInteger(x)||!Number.isInteger(y)||x<0||x>4||y<0||y>2)continue;
+      const theme=expandedThemes.get(entry.device)||resolveTheme(entry.settings.theme,globalSettings.theme);
+      const image=`data:image/png;base64,${expandedSpectrogram.tile(x,y,theme)}`;
+      if(image!==entry.lastImage){entry.lastImage=image;send('setImage',context,{image,target:0});}
+      if(!entry.titleCleared){send('setTitle',context,{title:'',target:0});entry.titleCleared=true;}
+      continue;
+    }
     const gateDb=gateThreshold(entry.settings.gateDb);
     const silent=(entry.displayGate??=new DisplayGate()).update(fresh(meterTime)?meter.peak:NaN,gateDb);
     const options = {
@@ -149,7 +196,7 @@ function redraw() {
       stereo: known.stereo===true, scope: known.scope===true, frozen: !!entry.frozenMeter,
       pitch:known.pitch===true,spectrum:known.spectrum===true,
       silent:known.audio===true&&silent,gateDb,scopeMode:entry.settings.scopeMode||'triggered',
-      visualStyle:entry.settings.visualStyle||'particles',theme: resolveTheme(entry.settings.theme,globalSettings.theme),performance:globalSettings.performance, target: Number(entry.settings.target ?? -14)
+      visualStyle:entry.settings.visualStyle||'particles',theme: isSpectrum(entry.kind)&&entry.settings.expanded===true?(expandedThemes.get(entry.device+' spectrum')||resolveTheme(entry.settings.theme,globalSettings.theme)):resolveTheme(entry.settings.theme,globalSettings.theme),performance:globalSettings.performance, target: Number(entry.settings.target ?? -14)
     };
     let drawMeter=entry.kind==='pitch'&&!fresh(pitchTime)?{...meter,pitch:null}:meter;
     if(entry.kind==='spectrogram'&&!entry.frozenMeter)drawMeter={...drawMeter,spectrogram:spectrogram.snapshot(resolveTheme(entry.settings.theme,globalSettings.theme))};
@@ -157,14 +204,15 @@ function redraw() {
       const flow=(entry.flow??=new ReactiveFlow());
       drawMeter={...drawMeter,flow:flow.tick(meter,options.silent,now)};
     }
-    let svg = entry.kind==='theme'?render('theme',{}, {},options):isSpectrum(entry.kind) ? renderSpectrum(Number(entry.kind.slice(-1))-1,spectrum.snapshot(),{connected:known.spectrum===true,audio:options.audio,frozen:!!spectrum.frozen,silent:!spectrum.frozen&&(options.silent||!fresh(spectrum.time))}) : render(entry.kind, state, entry.frozenMeter || drawMeter, entry.frozenMeter ? { ...options, ...entry.frozenOptions, frozen:true,animationTime:entry.frozenTime } : options);
-    svg=applyTheme(svg,options.theme,{visual:VISUAL_ACTIONS.includes(entry.kind)||isSpectrum(entry.kind)||entry.kind==='bands'});
+    let svg = entry.kind==='theme'?render('theme',{}, {},options):isSpectrum(entry.kind) ? renderSpectrum(Number(entry.kind.slice(-1))-1,spectrum.snapshot(),{expanded:entry.settings.expanded===true,row:entry.settings.tileY,connected:known.spectrum===true,audio:options.audio,frozen:!!spectrum.frozen,silent:!spectrum.frozen&&(options.silent||!fresh(spectrum.time))}) : render(entry.kind, state, entry.frozenMeter || drawMeter, entry.frozenMeter ? { ...options, ...entry.frozenOptions, frozen:true,animationTime:entry.frozenTime } : options);
+    svg=applyTheme(svg,options.theme,{visual:VISUAL_ACTIONS.includes(entry.kind)||isSpectrum(entry.kind)||entry.kind==='bands',height:isSpectrum(entry.kind)&&entry.settings.expanded===true?432:144});
     svg=nativeImage(svg);
     if (svg === entry.lastImage) continue;
     entry.lastImage = svg;
     send('setImage', context, { image: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`, target: 0 });
     if(!entry.titleCleared){send('setTitle', context, { title: '', target: 0 });entry.titleCleared=true;}
   }
+  for(const entry of contexts.values())if(isSpectrum(entry.kind)&&entry.settings.expanded===true&&now>=(expandedSpectrumNext.get(entry.device)||0))expandedSpectrumNext.set(entry.device,now+(globalSettings.performance==='economy'?100:50));
 }
 if (arg('-port') && arg('-pluginUUID')) {
   websocket = new WebSocket(`ws://127.0.0.1:${arg('-port')}`);
@@ -183,10 +231,17 @@ if (arg('-port') && arg('-pluginUUID')) {
       else if(msg.event==='didReceiveGlobalSettings'){globalSettingsLoaded=true;updateGlobal(msg.payload.settings||{});offerHUD();notifyAppearance();}
       else if(msg.event==='deviceDidConnect'){initialDevices.push({id:msg.device,...msg.deviceInfo});offerHUD();}
       else if(msg.event==='sendToPlugin'&&msg.payload?.type==='openHUD'){openHUD(contexts.get(msg.context)?.device);}
+      else if(msg.event==='sendToPlugin'&&msg.payload?.type==='toggleSpectrogram'){
+        const entry=contexts.get(msg.context);if(entry?.kind==='spectrogram')switchSpectrogram(entry,entry.settings.expanded!==true);
+      }
+      else if(msg.event==='sendToPlugin'&&msg.payload?.type==='toggleSpectrum'){
+        const entry=contexts.get(msg.context);if(entry&&isSpectrum(entry.kind))switchSpectrum(entry,entry.settings.expanded!==true);
+      }
       else if(msg.event==='sendToPlugin'&&msg.payload?.type==='appearance'){
         updateGlobal(msg.payload.settings||{});send('setGlobalSettings',arg('-pluginUUID'),globalSettings);notifyAppearance();
       }else if (msg.event === 'willAppear') {
         contexts.set(msg.context, { device:msg.device,kind: msg.action.split('.').pop(), settings: msg.payload.settings || {} });
+        if(isSpectrum(msg.action.split('.').pop())&&msg.payload.settings?.expanded===true)expandedSpectrumNext.delete(msg.device);
       } else if (msg.event === 'willDisappear') contexts.delete(msg.context);
       else if (msg.event === 'didReceiveSettings') {
         const entry = contexts.get(msg.context);
@@ -200,6 +255,12 @@ if (arg('-port') && arg('-pluginUUID')) {
         const held = Date.now() - entry.down >= 650;
         entry.down = 0;
         entry.nextRender=0;
+        if(entry.kind==='spectrogram'){
+          switchSpectrogram(entry,entry.settings.expanded!==true);return;
+        }
+        if(isSpectrum(entry.kind)&&(entry.settings.expanded===true||!held)){
+          switchSpectrum(entry,entry.settings.expanded!==true);return;
+        }
         if(entry.kind==='click')return;
         if(entry.kind==='theme'){
           globalSettings.theme=nextTheme(globalSettings.theme);invalidate();

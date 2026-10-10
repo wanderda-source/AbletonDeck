@@ -1,16 +1,14 @@
 <!doctype html><html><head><meta charset="utf-8"><style>
-body{font:12px Arial;color:#eee;background:#202020;padding:12px;margin:0}label{display:block;margin:15px 0 6px;color:#bbb}input,select{width:100%;padding:8px;box-sizing:border-box;background:#111;color:white;border:1px solid #444;border-radius:5px}p{color:#999;line-height:1.5}h3{font-size:13px;font-weight:normal;margin:6px 0 0;color:#9b23f2}.section{margin-top:18px;border-top:1px solid #383838;padding-top:4px}
+body{font:12px Arial;color:#eee;background:#202020;padding:12px;margin:0}label{display:block;margin:15px 0 6px;color:#bbb}input,select{width:100%;padding:8px;box-sizing:border-box;background:#111;color:white;border:1px solid #444;border-radius:5px}p{color:#999;line-height:1.5}.section{margin-top:18px;border-top:1px solid #383838;padding-top:4px}
 </style></head><body>
-<h3>Wander_scope</h3>
-<button id="openHUD" style="margin-top:12px;background:#333;color:white;border:1px solid #555;border-radius:5px;padding:8px;width:100%">Open ready-made HUD · 15 keys</button>
-<label>Global palette</label><select id="globalTheme"></select>
-<label>This key</label><select id="theme"><option value="global">Follow global palette</option></select>
-<label>Performance · all keys</label><select id="performance"><option value="smooth">Smooth</option><option value="economy">Economy</option></select>
-<p>Black background, white numbers. Economy reduces display updates and particle detail; audio analysis stays the same.</p>
-<div id="audioControls" class="section"><label>Display gate · dBFS</label><input id="gateDb" type="number" min="-100" max="-20" step="1" value="-60"><p>Below the gate, numbers show 0.0. Silence does not disconnect the meter.</p></div>
-<div id="wavecontrols" hidden><label>Oscilloscope</label><select id="scopeMode"><option value="triggered">Trigger · stable phase</option><option value="free">Free-running</option></select></div>
-<div id="reactivecontrols" hidden><label>Visualizer style · this key</label><select id="visualStyle"><option value="particles">Particles</option><option value="ribbon">Ribbon</option><option value="field">Field</option><option value="mesh">Mesh</option></select></div>
-<div id="lufscontrols" hidden><label>LUFS target</label><input id="target" type="number" min="-60" max="0" step="0.5" value="-14"><label>Default LUFS mode</label><select id="mode"><option value="s">Short-term · 3 seconds</option><option value="m">Momentary · 400 ms</option><option value="i">Integrated · prototype</option></select></div>
+<label for="globalTheme">Global colour</label><select id="globalTheme"></select>
+<label for="theme">Key colour</label><select id="theme"><option value="global">Same as global</option></select>
+<label for="performance">Performance · all keys</label><select id="performance"><option value="smooth">Smooth</option><option value="economy">Economy</option></select>
+<p>Economy: fewer visual updates.</p>
+<div id="audioControls" class="section"><label for="gateDb">Gate · dBFS</label><input id="gateDb" type="number" min="-100" max="-20" step="1" value="-60"><p>Ignore signal below this level.</p></div>
+<div id="wavecontrols" hidden><label for="scopeMode">Oscilloscope</label><select id="scopeMode"><option value="triggered">Triggered · stable</option><option value="free">Free-running</option></select></div>
+<div id="reactivecontrols" hidden><label for="visualStyle">Visualizer</label><select id="visualStyle"><option value="particles">Particles</option><option value="ribbon">Ribbon</option><option value="field">Field</option><option value="mesh">Mesh</option></select></div>
+<div id="lufscontrols" hidden><label for="target">Target · LUFS</label><input id="target" type="number" min="-60" max="0" step="0.5" value="-14"><label for="mode">Default mode</label><select id="mode"><option value="s">Short-term · 3 s</option><option value="m">Momentary · 400 ms</option><option value="i">Integrated · prototype</option></select></div>
 <p id="help"></p>
 <script>
 const palettes=[['orange','Original orange'],['violet','Violet'],['purple','Purple'],['green','Green'],['blue','Blue'],['red','Red'],['white','White']];
@@ -26,12 +24,17 @@ function connectElgatoStreamDeckSocket(port,id,event,info,action){
   const audio=['lufs','peak','midside','waveform','vectorscope','goniometer','pitch','reactive','spectrogram','bands'].includes(kind)||/^spectrum[1-5]$/.test(kind);
   el('audioControls').hidden=!audio;el('wavecontrols').hidden=kind!=='waveform';el('lufscontrols').hidden=kind!=='lufs';el('theme').disabled=kind==='theme';
   el('reactivecontrols').hidden=kind!=='reactive';
-  el('help').textContent=kind==='theme'?'Tap this key to cycle the global palette. Keys with a fixed palette keep their colour.':/^spectrum[1-5]$/.test(kind)?'Place Spectrum 1–5 left to right. Tap any key to freeze the row. Fixed FFT scale and resolution in both performance modes.':kind==='reactive'?'Tap to freeze. Hold to cycle this key’s palette. Choose a style for this key. All styles drift slowly during silence.':kind==='pitch'?'Best with a monophonic source. Central detune scale: ±50 cents. Tap to freeze; hold to cycle the palette.':kind==='lufs'?'Tap to switch mode; hold to reset.':kind==='peak'?'Hold to reset the peak maximum.':audio?'Tap to freeze; hold to cycle this key’s palette.':'';
   settings=a.payload.settings||{};syncLocal();syncGlobal();
+  const spectrum=/^spectrum[1-5]$/.test(kind);
+  function syncHelp(){
+    const hints={lufs:'Tap: change mode · Hold: reset',peak:'Hold: reset peak',pitch:'Monophonic · Detune: ±50 cents',click:'Flashes during playback',play:'Tap: play / pause',theme:'Tap: next colour'};
+    el('help').textContent=spectrum||kind==='spectrogram'?(settings.expanded?'Tap any key: return':spectrum?'Tap: expand · Hold: freeze':'Tap: expand'):hints[kind]||(audio?'Tap: freeze · Hold: colour':'');
+    el('help').hidden=!el('help').textContent;
+  }
+  syncHelp();
   ws=new WebSocket('ws://127.0.0.1:'+port);
   ws.onopen=()=>{ws.send(JSON.stringify({event,uuid:id}));plugin({type:'appearanceQuery'});};
-  el('openHUD').onclick=()=>plugin({type:'openHUD'});
-  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.event==='didReceiveSettings'){settings=m.payload.settings||{};syncLocal();}if(m.event==='sendToPropertyInspector'&&m.payload.type==='appearance'){globalSettings=m.payload.settings;syncGlobal();}};
+  ws.onmessage=e=>{const m=JSON.parse(e.data);if(m.event==='didReceiveSettings'){settings=m.payload.settings||{};syncLocal();syncHelp();}if(m.event==='sendToPropertyInspector'&&m.payload.type==='appearance'){globalSettings=m.payload.settings;syncGlobal();}};
   for(const name of fields)el(name).onchange=()=>{settings[name]=['target','gateDb'].includes(name)?Number(el(name).value):el(name).value;ws.send(JSON.stringify({event:'setSettings',context:uuid,payload:settings}));};
   for(const name of ['globalTheme','performance'])el(name).onchange=()=>{globalSettings={...globalSettings,theme:el('globalTheme').value,performance:el('performance').value};plugin({type:'appearance',settings:globalSettings});};
 }

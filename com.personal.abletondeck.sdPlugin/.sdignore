@@ -1,0 +1,7 @@
+*.log
+runtime-status.json
+fft-diagnostics.json
+meter-connection.json
+appearance-settings.json
+.abletondeck-owned
+node_modules/.package-lock.json

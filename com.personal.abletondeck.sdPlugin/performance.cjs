@@ -9,7 +9,8 @@ function intervalFor(kind,mode='smooth'){
 }
 function renderDue(entry,now,mode){
   if(entry.nextRender!=null&&now<entry.nextRender)return false;
-  entry.nextRender=now+intervalFor(entry.kind,mode);return true;
+  const expanded=/^spectrum[1-5]$/.test(entry.kind)&&entry.settings?.expanded===true;
+  entry.nextRender=now+(expanded?(mode==='economy'?100:50):intervalFor(entry.kind,mode));return true;
 }
 function nativeImage(svg){return svg.replace(/(<svg\b[^>]*?)width="144" height="144"/, '$1width="72" height="72"');}
 module.exports={intervalFor,renderDue,nativeImage};
