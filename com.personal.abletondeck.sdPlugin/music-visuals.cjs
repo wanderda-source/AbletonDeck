@@ -28,6 +28,7 @@ class ReactiveFlow {
     const level=silent?0:clamp(((meter.peak??-120)+60)/54);
     this.onset=Math.max(this.onset*Math.exp(-dt*9),silent?0:clamp((level-this.level)*5));
     this.level+=(level-this.level)*(1-Math.exp(-dt*7));
+    this.energy=energy;this.bass=bass;this.high=high;
     this.time+=dt*(silent?.07:.6+energy*.8);const t=this.time;
     const cx=72+noise(t*.7,1)*24*(.5+width),cy=72+noise(t*.6,2)*24;
     this.particles.forEach((p,j)=>{
@@ -41,7 +42,43 @@ class ReactiveFlow {
     });
     return this.snapshot();
   }
-  snapshot(){return {onset:this.onset,particles:this.particles.map(p=>({x:p.x,y:p.y,trail:p.trail.map(v=>[...v])}))};}
+  snapshot(){return {time:this.time,energy:this.energy||0,bass:this.bass||0,high:this.high||0,onset:this.onset,particles:this.particles.map(p=>({x:p.x,y:p.y,trail:p.trail.map(v=>[...v])}))};}
+}
+function renderForm(style,flow,opts){
+  const t=flow.time||0,l=flow.energy||0,b=flow.bass||0,h=flow.high||0;
+  const eco=opts.performance==='economy',f=v=>v.toFixed(2);
+  const path=(points,opacity,width=1.2)=>`<path d="${points.map(([x,y],k)=>`${k?'L':'M'}${f(x)} ${f(y)}`).join(' ')}" stroke-opacity="${f(opacity)}" stroke-width="${width}"/>`;
+  let body=`<g data-reactive="true" data-style="${style}" fill="none" stroke="#f25623" stroke-linecap="round" stroke-linejoin="round">`;
+  if(style==='ribbon'){
+    const count=eco?5:7,steps=eco?36:72;
+    for(let j=0;j<count;j++){
+      const layer=j*6/(count-1),points=[];
+      for(let k=0;k<=steps;k++){
+        const u=k/steps,envelope=Math.pow(Math.sin(u*Math.PI),.7);
+        points.push([12+u*120,72+(layer-3)*3+envelope*(Math.sin(u*7-t*.8+layer*.26)*(12+21*l)+Math.sin(u*13+t*.6+layer*.1)*(3+10*h))]);
+      }
+      body+=path(points,.2+layer*.1);
+    }
+  }else if(style==='field'){
+    const cx=72+noise(t*.55,1)*30,cy=72+noise(t*.61,2)*30;
+    for(let row=0;row<7;row++)for(let col=0;col<7;col++){
+      const x=21+col*17,y=21+row*17,dx=x-cx,dy=y-cy,r=Math.hypot(dx,dy);
+      const a=Math.atan2(dy,dx)+Math.PI/2+.9*Math.sin(x*.034+y*.052+t*.6)+h*.4;
+      const len=4.4+2.6*l+1.1*b*Math.cos(r*.06),vx=Math.cos(a)*len,vy=Math.sin(a)*len;
+      body+=path([[x-vx,y-vy],[x+vx,y+vy]],.4+.5*Math.max(0,1-r/130),1.55);
+    }
+  }else if(style==='mesh'){
+    const p=(x,y)=>{
+      const r=Math.hypot(x-4,y-4),z=Math.sin(r*1.3-t*1.1)*(5+10*l)+Math.cos(x*.7+y*.8+t*.5)*(4+4*b);
+      return [72+(x-4)*12+(y-4)*4,73+(y-4)*8-z];
+    };
+    const steps=eco?24:40;
+    for(let axis=0;axis<2;axis++)for(let j=0;j<9;j++){
+      const points=[];for(let k=0;k<=steps;k++)points.push(p(axis?j:k*8/steps,axis?k*8/steps:j));
+      body+=path(points,.35+j*.055,1.1);
+    }
+  }
+  return body+'</g>';
 }
 function renderReactive(meter={},opts={}){
   const silent=opts.silent||!Number.isFinite(meter.peak)||meter.peak<=-110;
@@ -54,10 +91,12 @@ function renderReactive(meter={},opts={}){
     preview.time+=opts.animationTime??0;
     flow=preview.tick(meter,silent,start+1250);
   }
+  if(['ribbon','field','mesh'].includes(opts.visualStyle))return renderForm(opts.visualStyle,flow,opts);
   let body='<g data-reactive="true" data-style="flow" fill="none" stroke-linecap="round" stroke-linejoin="round">';
   flow.particles.forEach((p,j)=>{
+    if(opts.performance==='economy'&&j%2)return;
     const orange=j%17===0,color=orange?'#f25623':'#dedede';
-    const d=p.trail.map(([x,y],k)=>`${k?'L':'M'}${x.toFixed(2)} ${y.toFixed(2)}`).join(' ');
+    const d=(opts.performance==='economy'?p.trail.slice(-4):p.trail).map(([x,y],k)=>`${k?'L':'M'}${x.toFixed(2)} ${y.toFixed(2)}`).join(' ');
     body+=`<path d="${d}" stroke="${color}" stroke-opacity="${orange?.75:.35}" stroke-width=".6"/><circle cx="${p.x.toFixed(2)}" cy="${p.y.toFixed(2)}" r="${(.65+flow.onset*.55).toFixed(2)}" fill="${color}"/>`;
   });
   return body+'</g>';

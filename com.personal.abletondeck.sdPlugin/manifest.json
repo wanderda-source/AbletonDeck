@@ -8,7 +8,7 @@
   "Icon": "images/plugin",
   "URL": "https://github.com/wanderda-source/AbletonDeck",
   "UUID": "com.personal.abletondeck",
-  "Version": "0.3.16.0",
+  "Version": "0.3.22.0",
   "SDKVersion": 2,
   "CodePath": "plugin.cjs",
   "Nodejs": {
@@ -145,23 +145,6 @@
       ]
     },
     {
-      "UUID": "com.personal.abletondeck.vectorscope",
-      "Name": "Loudness History",
-      "Icon": "images/vectorscope",
-      "Tooltip": "Loudness History",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/vectorscope",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
       "UUID": "com.personal.abletondeck.spectrogram",
       "Name": "Spectrogram",
       "Icon": "images/spectrogram",
@@ -264,40 +247,6 @@
       ]
     },
     {
-      "UUID": "com.personal.abletondeck.bands",
-      "Name": "Frequency Visual",
-      "Icon": "images/bands",
-      "Tooltip": "Frequency Visual",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/bands",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.reset",
-      "Name": "Reset Meter",
-      "Icon": "images/reset",
-      "Tooltip": "Reset Meter",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/reset",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
       "UUID": "com.personal.abletondeck.play",
       "Name": "Play / Pause",
       "Icon": "images/play",
@@ -315,74 +264,6 @@
       ]
     },
     {
-      "UUID": "com.personal.abletondeck.stop",
-      "Name": "Stop",
-      "Icon": "images/stop",
-      "Tooltip": "Stop",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/stop",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.record",
-      "Name": "Arrangement Record",
-      "Icon": "images/record",
-      "Tooltip": "Arrangement Record",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/record",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.sessionrecord",
-      "Name": "Session Record",
-      "Icon": "images/sessionrecord",
-      "Tooltip": "Session Record",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/sessionrecord",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.loop",
-      "Name": "Loop",
-      "Icon": "images/loop",
-      "Tooltip": "Loop",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/loop",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
       "UUID": "com.personal.abletondeck.click",
       "Name": "Metronome",
       "Icon": "images/click",
@@ -394,193 +275,6 @@
       "States": [
         {
           "Image": "images/click",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.mute",
-      "Name": "Selected Track Mute",
-      "Icon": "images/mute",
-      "Tooltip": "Selected Track Mute",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/mute",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.solo",
-      "Name": "Selected Track Solo",
-      "Icon": "images/solo",
-      "Tooltip": "Selected Track Solo",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/solo",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.arm",
-      "Name": "Selected Track Arm",
-      "Icon": "images/arm",
-      "Tooltip": "Selected Track Arm",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/arm",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.prev",
-      "Name": "Previous Track",
-      "Icon": "images/prev",
-      "Tooltip": "Previous Track",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/prev",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.next",
-      "Name": "Next Track",
-      "Icon": "images/next",
-      "Tooltip": "Next Track",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/next",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.scene",
-      "Name": "Launch Selected Scene",
-      "Icon": "images/scene",
-      "Tooltip": "Launch Selected Scene",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/scene",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.stopclips",
-      "Name": "Stop All Clips",
-      "Icon": "images/stopclips",
-      "Tooltip": "Stop All Clips",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/stopclips",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.undo",
-      "Name": "Undo",
-      "Icon": "images/undo",
-      "Tooltip": "Undo",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/undo",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.redo",
-      "Name": "Redo",
-      "Icon": "images/redo",
-      "Tooltip": "Redo",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/redo",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.tap",
-      "Name": "Tap Tempo",
-      "Icon": "images/tap",
-      "Tooltip": "Tap Tempo",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/tap",
-          "TitleAlignment": "middle",
-          "FontSize": 12
-        }
-      ]
-    },
-    {
-      "UUID": "com.personal.abletondeck.overdub",
-      "Name": "MIDI Overdub",
-      "Icon": "images/overdub",
-      "Tooltip": "MIDI Overdub",
-      "Controllers": [
-        "Keypad"
-      ],
-      "DisableAutomaticStates": true,
-      "States": [
-        {
-          "Image": "images/overdub",
           "TitleAlignment": "middle",
           "FontSize": 12
         }

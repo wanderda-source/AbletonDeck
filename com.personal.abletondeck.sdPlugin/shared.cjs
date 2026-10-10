@@ -1,4 +1,5 @@
-const COLORS = { orange: '#f25623', blue: '#dedede', mint: '#f25623', violet: '#dedede' };
+const {PALETTES}=require('./themes.cjs');
+const COLORS=Object.fromEntries(Object.entries(PALETTES).map(([k,v])=>[k,v.accent]));
 const {curvePath}=require('./spectrum.cjs');
 const {numericText}=require('./typography.cjs');
 const {idle}=require('./idle.cjs');
@@ -53,7 +54,7 @@ function glyph(kind, colour='#ffffff', y=35, size=74) {
   return `<g transform="translate(${(144-size)/2},${y}) scale(${size/24})" color="${colour}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${paths[kind]||paths.reset}</g>`;
 }
 function renderVisual(kind, meter, opts, text, accent) {
-  if(kind==='spectrogram')return renderSpectrogram(meter.spectrogram);
+  if(kind==='spectrogram')return renderSpectrogram(meter.spectrogram,opts.theme);
   if(kind==='pitch')return renderPitch(meter.pitch,opts.silent);
   if(kind==='reactive')return renderReactive(meter,opts);
   if(kind==='vectorscope'){
@@ -113,6 +114,7 @@ function render(kind, state = {}, meter = {}, opts = {}) {
   const accent = COLORS[opts.theme] || COLORS.orange;
   const text = (s, y, size = 16, color = '#ffffff') => `<text x="72" y="${y}" text-anchor="middle" fill="${color}" font-family="Arial, sans-serif" font-size="${size}" font-weight="700">${escape(s)}</text>`;
   let content = '';
+  if(kind==='theme')return `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144"><rect width="144" height="144" fill="#000000"/><circle cx="72" cy="59" r="23" fill="${accent}"/>${text(PALETTES[opts.theme]?.name||'Theme',112,15)}</svg>`;
   if (VISUAL_ACTIONS.includes(kind)) {
     const connected = kind === 'spectrogram' ? opts.spectrum : kind === 'midside' ? opts.stereo : ['vectorscope','reactive'].includes(kind)?opts.audio:kind==='pitch'?opts.pitch:opts.scope;
     if (!connected) content = idle(false);
@@ -145,7 +147,7 @@ function render(kind, state = {}, meter = {}, opts = {}) {
     if(kind==='click'){
       const pulse=state.playing?beatPulse(opts.beat??state.song_time??0):0;
       const opacity=state.playing?.42+.58*pulse:.75;
-      content=`<g data-metronome-pulse="${pulse.toFixed(3)}" opacity="${opacity.toFixed(3)}">${glyph('click',COLORS.orange)}</g>`;
+      content=`<g data-metronome-pulse="${pulse.toFixed(3)}" opacity="${opacity.toFixed(3)}">${glyph('click',accent)}</g>`;
     }
     if(tracked)content+=text(track,119,12,'#dedede');
     if(['tap','click'].includes(kind)&&opts.live)content+=numericText(Number(state.tempo||0).toFixed(1),132,15,{x:72,align:'middle'});

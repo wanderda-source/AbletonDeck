@@ -5,6 +5,11 @@ const path = require('node:path');
 const { render, decodeOSC, encodeOSC, fresh, scopeFromValues, VISUAL_ACTIONS } = require('./shared.cjs');
 const {Spectrum,renderSpectrum,isSpectrum}=require('./spectrum.cjs');
 const spectrum=new Spectrum();
+const {resolveTheme,nextTheme,themeName,applyTheme}=require('./themes.cjs');
+const {renderDue,nativeImage}=require('./performance.cjs');
+let globalSettings={theme:'orange',performance:'smooth'};
+function invalidate(){for(const entry of contexts.values())entry.nextRender=0;}
+function updateGlobal(value){globalSettings={...globalSettings,...value,theme:themeName(value.theme??globalSettings.theme),performance:value.performance==='economy'?'economy':'smooth'};invalidate();}
 const {Spectrogram}=require('./spectrogram.cjs');
 const spectrogram=new Spectrogram();
 const spectrogramGate=new (require('./display.cjs').DisplayGate)();
@@ -27,11 +32,14 @@ try{if(!process.env.ABLETONDECK_TEST_PORT_BASE)known=JSON.parse(fs.readFileSync(
 function remember(kind){
   if(known[kind]===true)return;
   known[kind]=true;
+  invalidate();
   try{if(!process.env.ABLETONDECK_TEST_PORT_BASE)fs.writeFileSync(connectionFile,JSON.stringify(known));}catch(e){log(e);}
 }
 const argv = process.argv.slice(2);
 function arg(k) { return argv[argv.indexOf(k) + 1]; }
 const contexts = new Map();
+const inspectors=new Set();
+function notifyAppearance(){for(const context of inspectors)send('sendToPropertyInspector',context,{type:'appearance',settings:globalSettings});}
 let state = {}, meter = {}, stateTime = 0, meterTime = 0, scopeTime = 0, stereoTime = 0;
 const portBase = Number(process.env.ABLETONDECK_TEST_PORT_BASE || 17940);
 const udp = dgram.createSocket('udp4');
@@ -63,7 +71,7 @@ udp.on('message', (buf, rinfo) => {
       if(msg.address==='/yfc/status'){meterStatus=msg.values;return;}
       if(msg.address==='/yfc/fftchunk'||msg.address==='/yfc/fftchunk2'){
         const frame=msg.address==='/yfc/fftchunk2'?fftFrames.receive(msg.values.slice(1),Date.now(),msg.values[0]):fftFrames.receive(msg.values);
-        if(frame){const result=fft.analyze(frame.samples,frame.rate);if(result){
+        if(frame&&[...contexts.values()].some(e=>isSpectrum(e.kind)||e.kind==='spectrogram')){const result=fft.analyze(frame.samples,frame.rate);if(result){
           spectrum.receive(result.values,Date.now(),result);
           spectrogram.receive(result.values,Date.now());
           if(!fftTime&&!process.env.ABLETONDECK_TEST_PORT_BASE){
@@ -73,7 +81,7 @@ udp.on('message', (buf, rinfo) => {
         }}
       }else if(msg.address==='/yfc/pitchbuffer'||msg.address==='/yfc/pitchchunk'){
         const frame=msg.address==='/yfc/pitchchunk'?pitchFrames.receive(msg.values):{rate:msg.values[0],samples:msg.values.slice(1)};
-        if(!frame)return;
+        if(!frame||![...contexts.values()].some(e=>['pitch','waveform'].includes(e.kind)))return;
         const {rate,samples}=frame;
         if(rate<8000||rate>16000||samples.length<640||samples.length>1400||!msg.values.every(Number.isFinite))return;
         const now=Date.now();
@@ -108,16 +116,18 @@ udp.on('message', (buf, rinfo) => {
   } catch (e) { log(e); }
 });
 udp.bind(portBase + 1, '127.0.0.1');
-function redraw(onlyWave=false) {
+function redraw() {
+  if(!contexts.size)return;
   const now=Date.now();
   if(!process.env.ABLETONDECK_TEST_PORT_BASE&&now-statusTime>2000){
     statusTime=now;
     try{fs.writeFileSync(path.join(__dirname,'runtime-status.json'),JSON.stringify({at:new Date(now).toISOString(),packets:packetStats,meterStatus,fftTime,fftPending:[...fftFrames.frames.values()].map(f=>({count:f.count,total:f.total,rate:f.rate})),fftSession:fftFrames.session,audioFresh:fresh(meterTime),scopeFresh:fresh(scopeTime),spectrumFresh:fresh(spectrum.time),spectrumFrozen:!!spectrum.frozen}));}catch(e){log(e);}
   }
   meter={...meter,history:history.tick(fresh(meterTime,now)?meter:{},known.audio===true,now,DEFAULT_GATE),historyTime:now};
-  if(!onlyWave){spectrum.tick();spectrogram.tick(now,spectrogramGate.update(fresh(meterTime)?meter.peak:NaN,DEFAULT_GATE));}
+  spectrum.tick(now);
+  if([...contexts.values()].some(e=>e.kind==='spectrogram'))spectrogram.tick(now,spectrogramGate.update(fresh(meterTime)?meter.peak:NaN,DEFAULT_GATE),true);
   for (const [context, entry] of contexts) {
-    if(onlyWave&&entry.kind!=='waveform')continue;
+    if(!renderDue(entry,now,globalSettings.performance))continue;
     const gateDb=gateThreshold(entry.settings.gateDb);
     const silent=(entry.displayGate??=new DisplayGate()).update(fresh(meterTime)?meter.peak:NaN,gateDb);
     const options = {
@@ -125,15 +135,17 @@ function redraw(onlyWave=false) {
       stereo: known.stereo===true, scope: known.scope===true, frozen: !!entry.frozenMeter,
       pitch:known.pitch===true,spectrum:known.spectrum===true,
       silent:known.audio===true&&silent,gateDb,scopeMode:entry.settings.scopeMode||'triggered',
-      theme: entry.settings.theme || 'orange', target: Number(entry.settings.target ?? -14)
+      visualStyle:entry.settings.visualStyle||'particles',theme: resolveTheme(entry.settings.theme,globalSettings.theme),performance:globalSettings.performance, target: Number(entry.settings.target ?? -14)
     };
     let drawMeter=entry.kind==='pitch'&&!fresh(pitchTime)?{...meter,pitch:null}:meter;
-    if(entry.kind==='spectrogram'&&!entry.frozenMeter)drawMeter={...drawMeter,spectrogram:spectrogram.snapshot()};
+    if(entry.kind==='spectrogram'&&!entry.frozenMeter)drawMeter={...drawMeter,spectrogram:spectrogram.snapshot(resolveTheme(entry.settings.theme,globalSettings.theme))};
     if(entry.kind==='reactive'&&!entry.frozenMeter){
       const flow=(entry.flow??=new ReactiveFlow());
       drawMeter={...drawMeter,flow:flow.tick(meter,options.silent,now)};
     }
-    const svg = isSpectrum(entry.kind) ? renderSpectrum(Number(entry.kind.slice(-1))-1,spectrum.snapshot(),{connected:known.spectrum===true,audio:options.audio,frozen:!!spectrum.frozen,silent:!spectrum.frozen&&(options.silent||!fresh(spectrum.time))}) : render(entry.kind, state, entry.frozenMeter || drawMeter, entry.frozenMeter ? { ...options, ...entry.frozenOptions, frozen:true,animationTime:entry.frozenTime } : options);
+    let svg = entry.kind==='theme'?render('theme',{}, {},options):isSpectrum(entry.kind) ? renderSpectrum(Number(entry.kind.slice(-1))-1,spectrum.snapshot(),{connected:known.spectrum===true,audio:options.audio,frozen:!!spectrum.frozen,silent:!spectrum.frozen&&(options.silent||!fresh(spectrum.time))}) : render(entry.kind, state, entry.frozenMeter || drawMeter, entry.frozenMeter ? { ...options, ...entry.frozenOptions, frozen:true,animationTime:entry.frozenTime } : options);
+    svg=applyTheme(svg,options.theme,{visual:VISUAL_ACTIONS.includes(entry.kind)||isSpectrum(entry.kind)||entry.kind==='bands'});
+    svg=nativeImage(svg);
     if (svg === entry.lastImage) continue;
     entry.lastImage = svg;
     send('setImage', context, { image: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`, target: 0 });
@@ -142,18 +154,27 @@ function redraw(onlyWave=false) {
 }
 if (arg('-port') && arg('-pluginUUID')) {
   websocket = new WebSocket(`ws://127.0.0.1:${arg('-port')}`);
-  websocket.on('open', () => websocket.send(JSON.stringify({ event: arg('-registerEvent'), uuid: arg('-pluginUUID') })));
+  websocket.on('open', () => {
+    websocket.send(JSON.stringify({ event: arg('-registerEvent'), uuid: arg('-pluginUUID') }));
+    send('getGlobalSettings',arg('-pluginUUID'),{});
+  });
   websocket.on('error', log);
   websocket.on('close', () => { udp.close(); process.exit(0); });
   websocket.on('message', raw => {
     try {
       const msg = JSON.parse(raw.toString());
-      if (msg.event === 'willAppear') {
+      if(msg.event==='propertyInspectorDidAppear'){inspectors.add(msg.context);notifyAppearance();}
+      else if(msg.event==='propertyInspectorDidDisappear'){inspectors.delete(msg.context);}
+      else if(msg.event==='sendToPlugin'&&msg.payload?.type==='appearanceQuery'){inspectors.add(msg.context);notifyAppearance();}
+      else if(msg.event==='didReceiveGlobalSettings'){updateGlobal(msg.payload.settings||{});notifyAppearance();}
+      else if(msg.event==='sendToPlugin'&&msg.payload?.type==='appearance'){
+        updateGlobal(msg.payload.settings||{});send('setGlobalSettings',arg('-pluginUUID'),globalSettings);notifyAppearance();
+      }else if (msg.event === 'willAppear') {
         contexts.set(msg.context, { kind: msg.action.split('.').pop(), settings: msg.payload.settings || {} });
       } else if (msg.event === 'willDisappear') contexts.delete(msg.context);
       else if (msg.event === 'didReceiveSettings') {
         const entry = contexts.get(msg.context);
-        if (entry) entry.settings = msg.payload.settings || {};
+        if (entry) {entry.settings = msg.payload.settings || {};entry.nextRender=0;}
       } else if (msg.event === 'keyDown') {
         const entry = contexts.get(msg.context);
         if (entry) entry.down = Date.now();
@@ -162,7 +183,13 @@ if (arg('-port') && arg('-pluginUUID')) {
         if (!entry || !entry.down) return;
         const held = Date.now() - entry.down >= 650;
         entry.down = 0;
+        entry.nextRender=0;
         if(entry.kind==='click')return;
+        if(entry.kind==='theme'){
+          globalSettings.theme=nextTheme(globalSettings.theme);invalidate();
+          send('setGlobalSettings',arg('-pluginUUID'),globalSettings);
+          notifyAppearance();
+        }else
         if (isSpectrum(entry.kind)) {
           if(!spectrum.toggle())send('showAlert',msg.context,{});
         } else if (['lufs', 'peak'].includes(entry.kind) && held || entry.kind === 'reset') {
@@ -174,24 +201,23 @@ if (arg('-port') && arg('-pluginUUID')) {
           send('setSettings', msg.context, entry.settings);
         } else if (VISUAL_ACTIONS.includes(entry.kind)) {
           if (held) {
-            entry.settings.theme = ['blue','violet'].includes(entry.settings.theme) ? 'orange' : 'blue';
+            entry.settings.theme = nextTheme(resolveTheme(entry.settings.theme,globalSettings.theme));
             send('setSettings', msg.context, entry.settings);
           } else if (entry.frozenMeter) { entry.frozenMeter = null; entry.frozenOptions = null; }
           else if (entry.kind === 'spectrogram' ? fresh(spectrum.time) : entry.kind === 'midside' ? fresh(stereoTime) : entry.kind === 'pitch'?fresh(pitchTime):['vectorscope','reactive'].includes(entry.kind) ? fresh(meterTime) : fresh(scopeTime)) {
-            entry.frozenMeter = { ...meter,spectrogram:spectrogram.snapshot(),flow:entry.flow?.snapshot() };
+            entry.frozenMeter = { ...meter,spectrogram:spectrogram.snapshot(resolveTheme(entry.settings.theme,globalSettings.theme)),flow:entry.flow?.snapshot() };
             entry.frozenTime=Date.now()/1000;
             entry.frozenOptions = {audio:meterTime>0,stereo:stereoTime>0,scope:scopeTime>0,pitch:known.pitch===true,silent:entry.displayGate?.update(meter.peak,gateThreshold(entry.settings.gateDb))??false};
           } else send('showAlert', msg.context, {});
         } else if (entry.kind === 'bands') {
-          entry.settings.theme = ['blue','violet'].includes(entry.settings.theme) ? 'orange' : 'blue';
+          entry.settings.theme = nextTheme(resolveTheme(entry.settings.theme,globalSettings.theme));
           send('setSettings', msg.context, entry.settings);
         } else if (entry.kind !== 'peak' && !command(entry.kind)) send('showAlert', msg.context, {});
       }
       redraw();
     } catch (e) { log(e); }
   });
-  let fastTick=false;
-  setInterval(()=>{fastTick=!fastTick;redraw(fastTick);},25);
+  setInterval(redraw,25);
 } else {
   log('Missing Stream Deck launch arguments');
   udp.close();
