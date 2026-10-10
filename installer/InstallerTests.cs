@@ -9,8 +9,11 @@ public static class InstallerTests {
         DeckSetup.Install(roots);
         Check(File.Exists(Path.Combine(roots["plugin"],"manifest.json")),"Missing plugin");
         Check(File.Exists(Path.Combine(roots["plugin"],"profiles","Wander_scope HUD.streamDeckProfile")),"Missing ready-made HUD");
+        Check(File.Exists(Path.Combine(roots["plugin"],"profiles","Wander_scope Spectrogram.streamDeckProfile")),"Missing expanded spectrogram");
+        Check(File.Exists(Path.Combine(roots["plugin"],"profiles","Wander_scope Spectrum.streamDeckProfile")),"Missing expanded spectrum");
         Check(File.Exists(Path.Combine(roots["meter"],"AbletonDeck Meter.amxd")),"Missing meter");
         Check(File.Exists(Path.Combine(roots["remote"],"controller.py")),"Missing remote");
+        Check(File.Exists(Path.Combine(roots["vst"],"Contents","x86_64-win","Wander_scope.vst3")),"Missing VST3");
         string settings=Path.Combine(roots["plugin"],"meter-connection.json");File.WriteAllText(settings,"user settings");
         DeckSetup.Install(roots);Check(File.ReadAllText(settings)=="user settings","Update changed user settings");
         string modified=Path.Combine(roots["remote"],"controller.py");File.WriteAllText(modified,"user modification");
