@@ -4,7 +4,7 @@
   "private": true,
   "description": "Personal Stream Deck controller and Max for Live stereo loudness monitor",
   "scripts": {
-    "test": "node --test tests/*.test.cjs",
+    "test": "node tools/test.cjs",
     "build": "python tools/build.py"
   },
   "dependencies": {

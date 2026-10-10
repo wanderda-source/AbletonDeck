@@ -44,7 +44,7 @@ Developers need Windows, Node.js/npm, Python 3 and the Windows .NET Framework C#
 npm ci
 Copy-Item node_modules com.personal.abletondeck.sdPlugin -Recurse -Force
 python tools/build.py
-node --test tests/*.test.cjs
+node tools/test.cjs
 powershell -NoProfile -ExecutionPolicy Bypass -File installer/build.ps1
 ```
 
