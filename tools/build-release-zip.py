@@ -21,7 +21,9 @@ REQUIREMENTS
 Stream Deck app 6.6+; Ableton Live 11/12: Lite, Intro, Standard or Suite.
 VST3 does not require Max for Live. AMXD is an optional alternative.
 Windows 10/11 or macOS 13+. macOS VST3 is universal (Intel + Apple Silicon).
-Tested with Live 12 Suite and the standard 15-key Stream Deck (5 x 3).
+The standard HUD has 15 keys (5 x 3).
+Earlier AMXD was used in Windows Live 12 Suite. This new VST3 passes automated
+Windows/Intel Mac/Apple Silicon tests; manual Live 11/12 edition checks are pending.
 
 INSTALL
 1. Extract this entire ZIP. Close Stream Deck from its system tray.
@@ -47,6 +49,7 @@ Choose colours and visualizer styles in the Stream Deck key settings.
 NOTES
 Setup does not install Ableton or Stream Deck. No Node.js or Python needed.
 Sample peak is not true peak; integrated LUFS is experimental.
+macOS bundle is ad-hoc signed, not Apple-notarized.
 Free, MIT licensed. Source, license and notices:
 https://github.com/wanderda-source/AbletonDeck
 Independent community project, not affiliated with Ableton or Elgato.
