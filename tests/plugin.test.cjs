@@ -3,6 +3,10 @@ const {spawn}=require('node:child_process'),dgram=require('node:dgram'),path=req
 const {WebSocketServer}=require('../node_modules/ws');
 const {decodeOSC}=require('../com.personal.abletondeck.sdPlugin/shared.cjs');
 const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function waitFor(check,timeout=4000){
+  const until=Date.now()+timeout;
+  while(!check()){if(Date.now()>=until)throw new Error('Timed out waiting for plugin response');await delay(20);}
+}
 test('actual plugin process registers, renders audio, sends commands and resets Max',async()=>{
   const server=new WebSocketServer({host:'127.0.0.1',port:0});
   await new Promise(resolve=>server.once('listening',resolve));
@@ -87,7 +91,9 @@ test('actual plugin process registers, renders audio, sends commands and resets 
     emit('keyDown','spectrum5');await delay(700);emit('keyUp','spectrum5');await delay(80);
     for(let j=1;j<=5;j++)assert.doesNotMatch(svg('spectrum'+j),/data-frozen="true"/);
     ws.send(JSON.stringify({event:'willAppear',context:'spectrum1',device:'standard-deck',action:'com.personal.abletondeck.spectrum1',payload:{settings:{theme:'blue'}}}));
-    emit('keyDown','spectrum1');emit('keyUp','spectrum1');await delay(80);
+    const spectrumSwitchCount=messages.filter(m=>m.event==='switchToProfile').length;
+    emit('keyDown','spectrum1');emit('keyUp','spectrum1');
+    await waitFor(()=>messages.filter(m=>m.event==='switchToProfile').length>spectrumSwitchCount);
     assert.deepEqual(messages.filter(m=>m.event==='switchToProfile').at(-1).payload,{profile:'profiles/Wander_scope Spectrum'});
     for(let y=0;y<3;y++)for(let x=0;x<5;x++)ws.send(JSON.stringify({event:'willAppear',context:`spectrumTile${x}${y}`,device:'standard-deck',action:`com.personal.abletondeck.spectrum${x+1}`,payload:{settings:{expanded:true,tileY:y}}}));
     await delay(160);
@@ -96,7 +102,9 @@ test('actual plugin process registers, renders audio, sends commands and resets 
       assert.match(image,/^data:image\/png;base64,/);
       const png=Buffer.from(image.split(',')[1],'base64');assert.equal(png.readUInt32BE(16),72);assert.equal(png.readUInt32BE(20),72);
     }
-    ws.send(JSON.stringify({event:'keyDown',context:'spectrumTile42'}));ws.send(JSON.stringify({event:'keyUp',context:'spectrumTile42'}));await delay(80);
+    const spectrumBackCount=messages.filter(m=>m.event==='switchToProfile').length;
+    ws.send(JSON.stringify({event:'keyDown',context:'spectrumTile42'}));ws.send(JSON.stringify({event:'keyUp',context:'spectrumTile42'}));
+    await waitFor(()=>messages.filter(m=>m.event==='switchToProfile').length>spectrumBackCount);
     assert.deepEqual(messages.filter(m=>m.event==='switchToProfile').at(-1).payload,{});
     for(let y=0;y<3;y++)for(let x=0;x<5;x++)ws.send(JSON.stringify({event:'willDisappear',context:`spectrumTile${x}${y}`}));
     await delay(1850);
@@ -120,7 +128,9 @@ test('actual plugin process registers, renders audio, sends commands and resets 
     assert.match(svg('spectrum3'),/1000 Hz/);
     assert.match(svg('spectrogram'),/data-spectrogram/);
     ws.send(JSON.stringify({event:'willAppear',context:'spectrogram',device:'standard-deck',action:'com.personal.abletondeck.spectrogram',payload:{settings:{theme:'red'}}}));
-    emit('keyDown','spectrogram');emit('keyUp','spectrogram');await delay(80);
+    const spectrogramSwitchCount=messages.filter(m=>m.event==='switchToProfile').length;
+    emit('keyDown','spectrogram');emit('keyUp','spectrogram');
+    await waitFor(()=>messages.filter(m=>m.event==='switchToProfile').length>spectrogramSwitchCount);
     assert.deepEqual(messages.filter(m=>m.event==='switchToProfile').at(-1).payload,{profile:'profiles/Wander_scope Spectrogram'});
     for(let y=0;y<3;y++)for(let x=0;x<5;x++)ws.send(JSON.stringify({event:'willAppear',context:`tile${x}${y}`,device:'standard-deck',action:'com.personal.abletondeck.spectrogram',payload:{settings:{expanded:true,tileX:x,tileY:y}}}));
     await delay(160);
@@ -128,7 +138,9 @@ test('actual plugin process registers, renders audio, sends commands and resets 
       const image=messages.filter(m=>m.event==='setImage'&&m.context===`tile${x}${y}`).at(-1).payload.image;
       assert.match(image,/^data:image\/png;base64,/);const png=Buffer.from(image.split(',')[1],'base64');assert.equal(png.readUInt32BE(16),72);assert.equal(png.readUInt32BE(20),72);
     }
-    ws.send(JSON.stringify({event:'keyDown',context:'tile42'}));ws.send(JSON.stringify({event:'keyUp',context:'tile42'}));await delay(80);
+    const spectrogramBackCount=messages.filter(m=>m.event==='switchToProfile').length;
+    ws.send(JSON.stringify({event:'keyDown',context:'tile42'}));ws.send(JSON.stringify({event:'keyUp',context:'tile42'}));
+    await waitFor(()=>messages.filter(m=>m.event==='switchToProfile').length>spectrogramBackCount);
     const back=messages.filter(m=>m.event==='switchToProfile').at(-1);assert.equal(back.device,'standard-deck');assert.deepEqual(back.payload,{});
     for(let y=0;y<3;y++)for(let x=0;x<5;x++)ws.send(JSON.stringify({event:'willDisappear',context:`tile${x}${y}`}));
     for(const session of [100,200]){
