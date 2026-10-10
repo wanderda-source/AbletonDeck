@@ -25,7 +25,7 @@ jobs:
           Copy-Item node_modules com.personal.abletondeck.sdPlugin -Recurse -Force
           python tools/build.py
           if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed' }
-          node --test tests/*.test.cjs
+          node tools/test.cjs
           if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
       - name: Compile Windows setup
         shell: powershell
