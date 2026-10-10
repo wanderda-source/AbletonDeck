@@ -47,3 +47,51 @@ with ZipFile(destination, 'w', ZIP_DEFLATED) as archive:
     for name, value in files.items():
         archive.writestr(name, json.dumps(value, ensure_ascii=False, separators=(',', ':')))
 print(f'Generated portable HUD: {len(actions)} keys.')
+
+# A separate bundled profile reuses the existing action UUID; no extra sidebar actions.
+profile_id = str(uuid5(NAMESPACE, 'Spectrogram')).upper()
+page_id = str(uuid5(NAMESPACE, 'Spectrogram page')).upper()
+pinned_id = str(uuid5(NAMESPACE, 'Spectrogram pinned')).upper()
+tile_template = actions['4,0']
+actions = {}
+for y in range(3):
+    for x in range(5):
+        action = json.loads(json.dumps(tile_template))
+        action['ActionID'] = str(uuid5(NAMESPACE, f'Spectrogram tile {x},{y}'))
+        action['Settings'] = {'expanded': True, 'tileX': x, 'tileY': y, 'theme': 'global'}
+        actions[f'{x},{y}'] = action
+profile['Name'] = 'Wander_scope Spectrogram'
+profile['Pages'] = {'Current': '00000000-0000-0000-0000-000000000000',
+                    'Default': pinned_id.lower(), 'Pages': [page_id.lower()]}
+base = f'Profiles/{profile_id}.sdProfile'
+files = {'package.json': package, f'{base}/manifest.json': profile,
+         f'{base}/Profiles/{page_id}/manifest.json': {'Controllers': [{'Actions': actions, 'Type': 'Keypad'}], 'Icon': '', 'Name': ''},
+         f'{base}/Profiles/{pinned_id}/manifest.json': {'Controllers': [{'Actions': None, 'Type': 'Keypad'}], 'Icon': '', 'Name': ''}}
+with ZipFile(PLUGIN / 'profiles' / 'Wander_scope Spectrogram.streamDeckProfile', 'w', ZIP_DEFLATED) as archive:
+    for name, value in files.items():
+        archive.writestr(name, json.dumps(value, ensure_ascii=False, separators=(',', ':')))
+print('Generated expanded spectrogram: 15 tiles.')
+
+profile_id = str(uuid5(NAMESPACE, 'Spectrum')).upper()
+page_id = str(uuid5(NAMESPACE, 'Spectrum page')).upper()
+pinned_id = str(uuid5(NAMESPACE, 'Spectrum pinned')).upper()
+actions = {}
+for y in range(3):
+    for x in range(5):
+        action = json.loads(json.dumps(tile_template))
+        action['UUID'] = f'com.personal.abletondeck.spectrum{x+1}'
+        action['Name'] = names[action['UUID']]
+        action['ActionID'] = str(uuid5(NAMESPACE, f'Spectrum tile {x},{y}'))
+        action['Settings'] = {'expanded': True, 'tileY': y, 'theme': 'global'}
+        actions[f'{x},{y}'] = action
+profile['Name'] = 'Wander_scope Spectrum'
+profile['Pages'] = {'Current': '00000000-0000-0000-0000-000000000000',
+                    'Default': pinned_id.lower(), 'Pages': [page_id.lower()]}
+base = f'Profiles/{profile_id}.sdProfile'
+files = {'package.json': package, f'{base}/manifest.json': profile,
+         f'{base}/Profiles/{page_id}/manifest.json': {'Controllers': [{'Actions': actions, 'Type': 'Keypad'}], 'Icon': '', 'Name': ''},
+         f'{base}/Profiles/{pinned_id}/manifest.json': {'Controllers': [{'Actions': None, 'Type': 'Keypad'}], 'Icon': '', 'Name': ''}}
+with ZipFile(PLUGIN / 'profiles' / 'Wander_scope Spectrum.streamDeckProfile', 'w', ZIP_DEFLATED) as archive:
+    for name, value in files.items():
+        archive.writestr(name, json.dumps(value, ensure_ascii=False, separators=(',', ':')))
+print('Generated expanded spectrum: 15 tiles.')
