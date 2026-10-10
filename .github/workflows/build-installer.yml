@@ -13,8 +13,13 @@ jobs:
         include:
           - os: windows-latest
             platform: Windows
+            artifact: Windows
           - os: macos-14
             platform: macOS
+            artifact: macOS
+          - os: macos-15-intel
+            platform: macOS
+            artifact: macOS-Intel-check
     runs-on: ${{ matrix.os }}
     env:
       WANDER_SCOPE_DISABLE_TELEMETRY: '1'
@@ -87,7 +92,7 @@ jobs:
         run: python tools/build-release-zip.py dist '${{ matrix.platform }}'
       - uses: actions/upload-artifact@v4
         with:
-          name: Wander_scope-${{ matrix.platform }}
+          name: Wander_scope-${{ matrix.artifact }}
           path: |
             dist/Wander_scope-${{ matrix.platform }}-*.zip
             dist/Wander_scope-${{ matrix.platform }}-*.zip.sha256
