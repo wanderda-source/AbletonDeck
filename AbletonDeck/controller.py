@@ -1,4 +1,4 @@
-"""A local, dependency-free Ableton Live 12 control surface.
+"""A local, dependency-free Ableton Live 11/12 control surface.
 
 All Live API calls run on Live's timer thread. No audio passes through this script.
 """
@@ -8,6 +8,8 @@ import socket
 from ableton.v2.control_surface import ControlSurface
 
 logger = logging.getLogger(__name__)
+COMMAND_PORT = 17940
+STATE_PORT = 17941
 
 
 class AbletonDeck(ControlSurface):
@@ -17,7 +19,7 @@ class AbletonDeck(ControlSurface):
         self._tick = 0
         try:
             self._udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self._udp.bind(('127.0.0.1', 17940))
+            self._udp.bind(('127.0.0.1', COMMAND_PORT))
             self._udp.setblocking(False)
             self.show_message('AbletonDeck: connected locally')
         except Exception as error:
@@ -49,7 +51,7 @@ class AbletonDeck(ControlSurface):
         self._tick += 1
         if self._tick % 2 == 0:
             try:
-                self._udp.sendto(json.dumps(self._state(), ensure_ascii=False).encode('utf-8'), ('127.0.0.1', 17941))
+                self._udp.sendto(json.dumps(self._state(), ensure_ascii=False).encode('utf-8'), ('127.0.0.1', STATE_PORT))
             except Exception as error:
                 if self._tick % 100 == 0:
                     logger.warning('AbletonDeck state: %s', error)
