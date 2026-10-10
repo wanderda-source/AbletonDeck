@@ -57,6 +57,10 @@ test('actual plugin process registers, renders audio, sends commands and resets 
     await delay(40);
     assert.notEqual(svg('waveform'),waveBefore,'next raw capture updates the scope promptly');
     assert.match(svg('reactive'),/data-reactive="true"/);
+    for(const visualStyle of ['ribbon','field','mesh','particles']){
+      emit('didReceiveSettings','reactive',{settings:{visualStyle}});await delay(100);
+      assert.match(svg('reactive'),new RegExp(`data-style="${visualStyle==='particles'?'flow':visualStyle}"`));
+    }
     emit('keyDown','reactive');emit('keyUp','reactive');await delay(80);
     const frozenReactive=svg('reactive');await delay(100);assert.equal(svg('reactive'),frozenReactive);
     emit('keyDown','reactive');emit('keyUp','reactive');await delay(80);
@@ -87,7 +91,7 @@ test('actual plugin process registers, renders audio, sends commands and resets 
     sendOSC('/yfc/meter',[-100,-80,-14,-120,-1,0,...Array(8).fill(-120),0,0]);await delay(100);
     assert.match(svg('lufs'),/data-value="0.0"/);
     assert.doesNotMatch(svg('lufs'),/data-idle/);
-    sendOSC('/yfc/meter',[-12,-13,-14,-1,-1,0,...Array(8).fill(-25),0.75,0.25]);await delay(100);
+    sendOSC('/yfc/meter',[-12,-13,-14,-1,-1,0,...Array(8).fill(-25),0.75,0.25]);await delay(200);
     assert.match(svg('lufs'),/data-value="-12.0"/);
     emit('willAppear','spectrogram',{settings:{}});
     const fftSamples=Array.from({length:16384*2},(_,j)=>.1*Math.sin(2*Math.PI*1000*Math.floor(j/2)/48000));
@@ -106,6 +110,26 @@ test('actual plugin process registers, renders audio, sends commands and resets 
       await delay(160);
       assert.match(svg(session===100?'spectrum3':'spectrum4'),new RegExp(hz+' Hz'),'actual plugin accepts a new meter with the same frame number');
     }
+    // Exercise the real plugin/inspector message path, not just palette helpers.
+    emit('didReceiveSettings','lufs',{settings:{theme:'red'}});
+    emit('sendToPlugin','reactive',{type:'appearance',settings:{theme:'green',performance:'smooth'}});
+    await delay(150);
+    assert.ok(messages.some(m=>m.event==='setGlobalSettings'&&m.payload.theme==='green'));
+    assert.match(svg('reactive'),/#23f278/);
+    assert.match(svg('lufs'),/data-value=.*fill="#ffffff"/);
+    emit('willAppear','theme',{settings:{}});await delay(80);
+    emit('keyDown','theme');emit('keyUp','theme');await delay(100);
+    assert.ok(messages.some(m=>m.event==='setGlobalSettings'&&m.payload.theme==='blue'));
+    assert.match(svg('theme'),/#237cf2/);
+    emit('didReceiveGlobalSettings','theme',{settings:{theme:'purple',performance:'smooth'}});await delay(100);
+    assert.match(svg('reactive'),/#da23f2/);
+    const frameCount=()=>messages.filter(m=>m.event==='setImage'&&m.context==='reactive').length;
+    let start=frameCount();await delay(600);const smoothFrames=frameCount()-start;
+    emit('sendToPlugin','reactive',{type:'appearance',settings:{theme:'purple',performance:'economy'}});await delay(100);
+    start=frameCount();await delay(600);const ecoFrames=frameCount()-start;
+    assert.ok(ecoFrames<smoothFrames,`${ecoFrames} economy vs ${smoothFrames} smooth frames`);
+    assert.ok(ecoFrames<=7,'economy reactive frame budget');
+    assert.match(svg('reactive'),/width="72" height="72"/);
   } finally {
     process_.kill();if(ws)ws.terminate();await new Promise(resolve=>server.close(resolve));
     control.close();max.close();source.close();
