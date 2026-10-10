@@ -10,7 +10,7 @@ with ZipFile(destination,'w',ZIP_DEFLATED) as archive:
         for file in sorted((root/directory).rglob('*')):
             if not file.is_file(): continue
             relative=file.relative_to(root/directory)
-            if '__pycache__' in relative.parts or file.suffix in ('.pyc','.log') or file.name in ('runtime-status.json','fft-diagnostics.json','meter-connection.json','.abletondeck-owned','.package-lock.json'): continue
+            if '__pycache__' in relative.parts or file.suffix in ('.pyc','.log') or file.name in ('runtime-status.json','fft-diagnostics.json','meter-connection.json','appearance-settings.json','.abletondeck-owned','.package-lock.json'): continue
             archive.write(file,Path(name)/relative)
 with ZipFile(destination) as archive: assert archive.testzip() is None
 print(destination)

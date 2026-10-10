@@ -2,6 +2,7 @@ param([string]$OutputDirectory = (Join-Path $PSScriptRoot '..\dist'))
 $ErrorActionPreference='Stop'
 $taskRoot = Split-Path $PSScriptRoot -Parent
 $taskCompiler = Join-Path ([Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()) 'csc.exe'
+if (!(Test-Path -LiteralPath $taskCompiler)) { $taskCompiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe' }
 if (!(Test-Path -LiteralPath $taskCompiler)) { throw 'Windows .NET Framework C# compiler was not found' }
 $taskOutput = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $taskOutput -Force | Out-Null

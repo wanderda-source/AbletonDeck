@@ -10,11 +10,11 @@ using System.Diagnostics;
 [assembly: System.Reflection.AssemblyTitle("Wander_scope Setup")]
 [assembly: System.Reflection.AssemblyProduct("Wander_scope")]
 [assembly: System.Reflection.AssemblyDescription("Free Stream Deck audio analysis for Ableton Live")]
-[assembly: System.Reflection.AssemblyVersion("0.3.16.0")]
-[assembly: System.Reflection.AssemblyFileVersion("0.3.16.0")]
+[assembly: System.Reflection.AssemblyVersion("0.3.22.0")]
+[assembly: System.Reflection.AssemblyFileVersion("0.3.22.0")]
 
 public static class DeckSetup {
-    public const string Version="0.3.16";
+    public const string Version="0.3.22";
     public static Dictionary<string,byte[]> Payload() {
         var files=new Dictionary<string,byte[]>();
         using(var stream=typeof(DeckSetup).Assembly.GetManifestResourceStream("AbletonDeck.payload"))
