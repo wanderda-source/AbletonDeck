@@ -1,0 +1,10 @@
+const fs=require('node:fs'),path=require('node:path');
+const {renderSpectrum}=require('../com.personal.abletondeck.sdPlugin/spectrum.cjs');
+const sharp=require(process.env.SHARP_PATH||'C:/Users/User/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/sharp');
+const level=Array.from({length:60},(_,j)=>-58+28*Math.exp(-(((j-13)/11)**2))+18*Math.exp(-(((j-36)/16)**2))+3*Math.sin(j*1.3));
+const data={level,peak:level.map((v,j)=>v+3+2*Math.sin(j*.8))};
+let svg='<svg xmlns="http://www.w3.org/2000/svg" width="1140" height="365"><rect width="1140" height="365" rx="24" fill="#000000"/><text x="30" y="42" fill="#eef3f8" font-family="Arial" font-size="26" font-weight="700">ABLETON DECK / SPECTRUM × 5</text><text x="30" y="72" fill="#8c9daf" font-family="Arial" font-size="15">60 полос · слева бас, справа высокие · пример на синтетических данных</text>';
+for(let j=0;j<5;j++)svg+=`<g transform="translate(${30+j*218},102) scale(1.4)">${renderSpectrum(j,data,{connected:true})}</g>`;
+svg+='<text x="30" y="339" fill="#8c9daf" font-family="Arial" font-size="15">Нажатие на любую часть — заморозка всего ряда. Зазоры между кнопками остаются.</text></svg>';
+fs.writeFileSync(path.join(__dirname,'../spectrum-preview.svg'),svg);
+sharp(Buffer.from(svg)).png().toFile(path.join(__dirname,'../spectrum-preview.png')).catch(e=>{console.error(e);process.exitCode=1});
