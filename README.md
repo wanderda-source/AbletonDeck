@@ -1,4 +1,8 @@
-# AbletonDeck 0.3.15 beta
+# Wander_scope 0.3.16 beta
+
+Audio meters & visuals for Ableton Live and Stream Deck — by **Wanderwave**.
+
+Formerly AbletonDeck. Existing action IDs, meter filenames and Control Surface names are retained so projects and Stream Deck profiles remain compatible.
 
 Free Stream Deck audio analysis and visuals for Ableton Live. MIT licensed; source included.
 
@@ -19,9 +23,9 @@ Free Stream Deck audio analysis and visuals for Ableton Live. MIT licensed; sour
 
 Tested: Windows 10/11, Stream Deck 6.6+, Ableton Live 12 Suite with Max for Live. Other Live versions/editions are unverified. This installer does not support macOS or Stream Deck knobs.
 
-Download AbletonDeck-Setup-0.3.15.exe from Releases. Close Stream Deck from its system tray. Run setup, select your existing Ableton User Library (find it in Live Settings > Library) and click Install / Update. No administrator rights, Node.js or Python are required by end users. The installer is currently unsigned.
+Download Wander_scope-Setup-0.3.16.exe from Releases. Close Stream Deck from its system tray. Run setup, select your existing Ableton User Library (find it in Live Settings > Library) and click Install / Update. No administrator rights, Node.js or Python are required by end users. The installer is currently unsigned.
 
-1. Open Stream Deck and drag AbletonDeck actions onto your keys. Arrange Spectrum 1 / 5 through 5 / 5 consecutively from left to right.
+1. Open Stream Deck and drag Wander_scope actions onto your keys. Arrange Spectrum 1 / 5 through 5 / 5 consecutively from left to right.
 2. Save your project and restart Live when convenient.
 3. Put User Library > Presets > Audio Effects > Max Audio Effect > AbletonDeck > AbletonDeck Meter.amxd last on Main/Master. Keep yfc-meter.js beside it. Use one meter per project.
 4. Optional Live controls: Settings > Link, Tempo & MIDI > Control Surface: AbletonDeck; Input/Output: None. Analysis and audio visuals do not require a Control Surface.
