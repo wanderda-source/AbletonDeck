@@ -10,11 +10,11 @@ using System.Diagnostics;
 [assembly: System.Reflection.AssemblyTitle("Wander_scope Setup")]
 [assembly: System.Reflection.AssemblyProduct("Wander_scope")]
 [assembly: System.Reflection.AssemblyDescription("Free Stream Deck audio analysis for Ableton Live")]
-[assembly: System.Reflection.AssemblyVersion("0.3.22.0")]
-[assembly: System.Reflection.AssemblyFileVersion("0.3.22.0")]
+[assembly: System.Reflection.AssemblyVersion("0.3.23.0")]
+[assembly: System.Reflection.AssemblyFileVersion("0.3.23.0")]
 
 public static class DeckSetup {
-    public const string Version="0.3.22";
+    public const string Version="0.3.23";
     public static Dictionary<string,byte[]> Payload() {
         var files=new Dictionary<string,byte[]>();
         using(var stream=typeof(DeckSetup).Assembly.GetManifestResourceStream("AbletonDeck.payload"))
@@ -78,9 +78,9 @@ public static class DeckSetup {
     }
 }
 public class SetupWindow:Form {
-    TextBox library;Button install,remove;Label status;
+    TextBox library;Button install,remove;Label status;CheckBox openDeck;
     public SetupWindow(){
-        Text="Wander_scope Setup · "+DeckSetup.Version;ClientSize=new Size(620,420);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;StartPosition=FormStartPosition.CenterScreen;
+        Text="Wander_scope Setup · "+DeckSetup.Version;ClientSize=new Size(620,450);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;StartPosition=FormStartPosition.CenterScreen;
         BackColor=Color.FromArgb(23,23,23);ForeColor=Color.White;Font=new Font("Segoe UI",10);
         var title=new Label{Text="Wander_scope",Location=new Point(24,22),Size=new Size(540,40),Font=new Font("Segoe UI",24,FontStyle.Bold),ForeColor=Color.FromArgb(242,86,35)};Controls.Add(title);
         Controls.Add(new Label{Text="Free audio analysis for Stream Deck + Ableton Live Suite",Location=new Point(26,70),Size=new Size(570,26)});
@@ -90,7 +90,8 @@ public class SetupWindow:Form {
         Controls.Add(new Label{Text="1. Close Stream Deck before installing.\n2. Save your work; restart Ableton after installation.\n3. Place AbletonDeck Meter.amxd last on Main/Master.\n4. For Live controls: select AbletonDeck as Control Surface.",Location=new Point(26,196),Size=new Size(570,100)});
         install=new Button{Text="Install / Update",Location=new Point(26,312),Size=new Size(180,40),BackColor=Color.FromArgb(242,86,35),ForeColor=Color.Black,FlatStyle=FlatStyle.Flat};install.Click+=(s,e)=>Run(false);Controls.Add(install);
         remove=new Button{Text="Remove",Location=new Point(222,312),Size=new Size(120,40)};remove.Click+=(s,e)=>Run(true);Controls.Add(remove);
-        status=new Label{Text="Windows · Stream Deck 6.6+ · Live 12 Suite · No administrator rights",Location=new Point(26,374),Size=new Size(570,32),ForeColor=Color.LightGray};Controls.Add(status);
+        openDeck=new CheckBox{Text="Open Stream Deck after installation · ready-made 15-key HUD included",Checked=true,Location=new Point(26,365),Size=new Size(570,26)};Controls.Add(openDeck);
+        status=new Label{Text="Windows · Stream Deck 6.6+ · Live 12 Suite · No administrator rights",Location=new Point(26,406),Size=new Size(570,32),ForeColor=Color.LightGray};Controls.Add(status);
     }
     void Run(bool uninstall){
         try {
@@ -99,7 +100,15 @@ public class SetupWindow:Form {
             var roots=DeckSetup.Roots(path,Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
             if(uninstall&&MessageBox.Show("Remove Wander_scope files from the selected User Library and Stream Deck? Modified files and profiles will be preserved.","Wander_scope",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;
             install.Enabled=remove.Enabled=false;
-            if(uninstall){int preserved=DeckSetup.Remove(roots);status.Text="Removed. Modified files preserved: "+preserved;}else{DeckSetup.Install(roots);status.Text="Installed. Open Stream Deck and restart Live when your work is saved.";MessageBox.Show("Installed successfully.\n\nOpen Stream Deck and find Wander_scope actions.\nRestart Live after saving your project.\nAdd User Library > Presets > Audio Effects > Max Audio Effect > AbletonDeck > AbletonDeck Meter.amxd last on Main/Master.\n\nOptional Live controls: Settings > Link, Tempo & MIDI > Control Surface: AbletonDeck; Input/Output: None.\n\nUse one meter device per project.","Wander_scope",MessageBoxButtons.OK,MessageBoxIcon.Information);}
+            if(uninstall){int preserved=DeckSetup.Remove(roots);status.Text="Removed. Modified files preserved: "+preserved;}else{
+                DeckSetup.Install(roots);
+                status.Text="Installed. Select Wander_scope HUD in Stream Deck.";
+                if(openDeck.Checked){
+                    string deck=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),"Elgato","StreamDeck","StreamDeck.exe");
+                    if(File.Exists(deck))Process.Start(new ProcessStartInfo(deck){UseShellExecute=true,WindowStyle=ProcessWindowStyle.Hidden});
+                }
+                MessageBox.Show("Installed successfully.\n\nStream Deck will offer the bundled Wander_scope HUD for a 15-key device. Accept the profile and select Wander_scope HUD; all keys are already arranged. Your existing profiles are preserved.\n\nRestart Live after saving your project.\nAdd User Library > Presets > Audio Effects > Max Audio Effect > AbletonDeck > AbletonDeck Meter.amxd last on Main/Master.\n\nFor Play / Pause and BPM: select AbletonDeck as Control Surface; Input/Output: None.\n\nUse one meter device per project.","Wander_scope",MessageBoxButtons.OK,MessageBoxIcon.Information);
+            }
         }catch(Exception e){MessageBox.Show(e.Message,"Wander_scope",MessageBoxButtons.OK,MessageBoxIcon.Error);}
         finally{install.Enabled=remove.Enabled=true;}
     }

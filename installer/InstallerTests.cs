@@ -8,6 +8,7 @@ public static class InstallerTests {
         var roots=DeckSetup.Roots(Path.Combine(area,"Library"),Path.Combine(area,"AppData"));
         DeckSetup.Install(roots);
         Check(File.Exists(Path.Combine(roots["plugin"],"manifest.json")),"Missing plugin");
+        Check(File.Exists(Path.Combine(roots["plugin"],"profiles","Wander_scope HUD.streamDeckProfile")),"Missing ready-made HUD");
         Check(File.Exists(Path.Combine(roots["meter"],"AbletonDeck Meter.amxd")),"Missing meter");
         Check(File.Exists(Path.Combine(roots["remote"],"controller.py")),"Missing remote");
         string settings=Path.Combine(roots["plugin"],"meter-connection.json");File.WriteAllText(settings,"user settings");
