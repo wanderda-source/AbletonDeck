@@ -1,4 +1,4 @@
-# Wander_scope 0.3.16 beta
+# Wander_scope 0.3.22 beta
 
 Audio meters & visuals for Ableton Live and Stream Deck — by **Wanderwave**.
 
@@ -6,7 +6,7 @@ Formerly AbletonDeck. Existing action IDs, meter filenames and Control Surface n
 
 Free Stream Deck audio analysis and visuals for Ableton Live. MIT licensed; source included.
 
-![Synthetic example layout](design-preview.png)
+![Synthetic example layout](hud-preview.png)
 
 ## Features
 
@@ -15,15 +15,15 @@ Free Stream Deck audio analysis and visuals for Ableton Live. MIT licensed; sour
 - Triggered combined-channel oscilloscope, goniometer and Mid/Side energy balance.
 - Momentary, short-term and experimental integrated LUFS; sample peak and reset.
 - Monophonic frequency-to-note detection with a detune scale.
-- Audio-reactive Flow particles that drift slowly in silence.
+- Four audio-reactive visualizers: Particles, Ribbon, enlarged Field and Mesh. Select **Visualizer style · this key** in the action settings. Each key can use a different style and palette; all styles move slowly during silence. Existing keys keep Particles.
 - Warm metronome icon: static on stop, pulsing to Live BPM during playback. This key is display-only.
-- Optional transport, loop, track and scene controls through a Live Remote Script.
+- Play / Pause through a Live Remote Script. The action list contains only the 15 keys used by the HUD: Spectrum 1–5, LUFS, Sample Peak, Spectrogram, Mid/Side, Oscilloscope, Goniometer, Frequency → Note, Audio Reactive, Play / Pause and Metronome.
 
 ## Requirements and installation
 
 Tested: Windows 10/11, Stream Deck 6.6+, Ableton Live 12 Suite with Max for Live. Other Live versions/editions are unverified. This installer does not support macOS or Stream Deck knobs.
 
-Download Wander_scope-Setup-0.3.16.exe from Releases. Close Stream Deck from its system tray. Run setup, select your existing Ableton User Library (find it in Live Settings > Library) and click Install / Update. No administrator rights, Node.js or Python are required by end users. The installer is currently unsigned.
+Download Wander_scope-Setup-0.3.22.exe from Releases. Close Stream Deck from its system tray. Run setup, select your existing Ableton User Library (find it in Live Settings > Library) and click Install / Update. No administrator rights, Node.js or Python are required by end users. The installer is currently unsigned.
 
 1. Open Stream Deck and drag Wander_scope actions onto your keys. Arrange Spectrum 1 / 5 through 5 / 5 consecutively from left to right.
 2. Save your project and restart Live when convenient.
@@ -42,6 +42,14 @@ Data is sent locally over loopback UDP 17940–17942; audio files are not record
 
 ## Build from source
 
+### Colour and performance settings
+
+Select a Wander_scope key in Stream Deck to choose **Global palette**, **This key**, and **Performance · all keys**. Available palettes, in order: Original orange, Violet, Purple, Green, Blue, scarlet Red, and White. Each palette except Original orange has its own vertical gradient within its colour family; White uses only neutral greys. The former standalone Gradient selection migrates to Violet. Set **This key → Follow global palette** for shared colours; existing fixed key colours are preserved. Hold an audio visual key to cycle its individual palette. The gradients are static and add no animation timer; spectrogram colours map intensity through the same family of hues.
+
+**Smooth** refreshes the oscilloscope up to 40 times/s, spectrum and particle flow up to 20 times/s, and numeric/control keys up to 8 times/s. **Economy** uses 20, 10, and 4 times/s respectively, with fewer particle trails. Spectrogram history advances at 8 columns/s in both modes. Unchanged images are not sent again. Frames use the original Stream Deck's 72 × 72 pixel output size, retaining smooth vector geometry and white numbers. FFT window, calibration, pitch detection and LUFS calculations are unchanged by the performance setting; FFT and pitch processing run only when relevant keys are visible.
+
+The Max for Live device uses a narrow 150 px panel: **Sending / to Stream Deck** with a pulsing dot while packets are emitted, including silence, or **Idle** if packets stop. Keep both `yfc-meter.js` and `yfc-panel.js` beside the AMXD.
+
 Developers need Windows, Node.js/npm, Python 3 and the Windows .NET Framework C# compiler. From this repository directory:
 
 ```powershell
@@ -54,7 +62,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File installer/build.ps1
 
 EXE and SHA256SUMS.txt appear in dist/. The payload includes the Stream Deck plugin, M4L meter and Remote Script, excluding runtime logs and private settings. Installer tests cover installation, updates, removal, preservation of modified files, ownership checks and failure rollback.
 
-.github/workflows/build-installer.yml builds and tests setup manually or on v* tags, then uploads a downloadable artifact. It does not publish a release automatically. CI execution has not yet been verified on GitHub.
+.github/workflows/build-installer.yml builds and tests setup manually or on v* tags, then uploads a downloadable artifact. It does not publish a release automatically.
 
 For a standalone Stream Deck package:
 
