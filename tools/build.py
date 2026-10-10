@@ -132,10 +132,10 @@ actions = [
 (PLUGIN / 'images').mkdir(exist_ok=True)
 manifest = {
     '$schema': 'https://schemas.elgato.com/streamdeck/plugins/manifest.json',
-    'Author': 'wanderda-source', 'Name': 'AbletonDeck', 'Description': 'Personal Ableton control, stereo LUFS and audio visuals.',
-    'Category': 'AbletonDeck', 'CategoryIcon': 'images/category', 'Icon': 'images/plugin',
+    'Author': 'Wanderwave', 'Name': 'Wander_scope', 'Description': 'Personal Ableton control, stereo LUFS and audio visuals.',
+    'Category': 'Wander_scope', 'CategoryIcon': 'images/category', 'Icon': 'images/plugin',
     'URL': 'https://github.com/wanderda-source/AbletonDeck', 'UUID': 'com.personal.abletondeck',
-    'Version': '0.3.15.0', 'SDKVersion': 2, 'CodePath': 'plugin.cjs', 'Nodejs': {'Version': '20'},
+    'Version': '0.3.16.0', 'SDKVersion': 2, 'CodePath': 'plugin.cjs', 'Nodejs': {'Version': '20'},
     'OS': [{'Platform': 'windows', 'MinimumVersion': '10'}], 'Software': {'MinimumVersion': '6.6'},
     'PropertyInspectorPath': 'settings.html',
     'Actions': [{'UUID': f'com.personal.abletondeck.{kind}', 'Name': name, 'Icon': f'images/{kind}',
@@ -146,8 +146,8 @@ manifest = {
 labels = {'midside':'MID / SIDE','waveform':'WAVE','spectrogram':'SPECTROGRAM','vectorscope':'HISTORY','goniometer':'GONIO','lufs':'LUFS','peak':'PEAK','bands':'BANDS','reset':'RESET','play':'PLAY','stop':'STOP','record':'REC',
           'sessionrecord':'S REC','loop':'LOOP','click':'CLICK','mute':'MUTE','solo':'SOLO','arm':'ARM',
           'prev':'PREV','next':'NEXT','scene':'SCENE','stopclips':'STOP CLIP','undo':'UNDO','redo':'REDO','tap':'TAP','overdub':'DUB'}
-for kind, name in actions + [('plugin', 'AbletonDeck')]:
-    label = f'SPEC {kind[-1]}/5' if kind.startswith('spectrum') else labels.get(kind, 'AD')
+for kind, name in actions + [('plugin', 'Wander_scope')]:
+    label = f'SPEC {kind[-1]}/5' if kind.startswith('spectrum') else labels.get(kind, 'WS')
     svg = f'<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144"><rect width="144" height="144" rx="17" fill="#000000"/><text x="72" y="82" text-anchor="middle" font-family="Arial" font-weight="700" font-size="24" fill="#f25623">{label}</text></svg>'
     (PLUGIN / 'images' / f'{kind}.svg').write_text(svg, encoding='utf-8')
 (PLUGIN / 'images' / 'category.svg').write_text((PLUGIN / 'images' / 'plugin.svg').read_text(encoding='utf-8'), encoding='utf-8')
