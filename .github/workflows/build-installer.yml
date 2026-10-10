@@ -34,15 +34,15 @@ jobs:
         shell: powershell
         run: |
           $taskCompiler = Join-Path ([Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()) 'csc.exe'
-          $taskSetup = (Get-ChildItem dist -Filter 'AbletonDeck-Setup-*.exe').FullName
+          $taskSetup = (Get-ChildItem dist -Filter 'Wander_scope-Setup-*.exe').FullName
           & $taskCompiler /nologo /target:exe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /out:dist\InstallerTests.exe "/reference:$taskSetup" installer\InstallerTests.cs
           if ($LASTEXITCODE -ne 0) { throw 'Installer test compilation failed' }
           & .\dist\InstallerTests.exe (Join-Path $env:RUNNER_TEMP 'AbletonDeckInstallerTests')
           if ($LASTEXITCODE -ne 0) { throw 'Installer tests failed' }
       - uses: actions/upload-artifact@v4
         with:
-          name: AbletonDeck-Windows
+          name: Wander_scope-Windows
           path: |
-            dist/AbletonDeck-Setup-*.exe
+            dist/Wander_scope-Setup-*.exe
             dist/SHA256SUMS.txt
             installer/RELEASE-NOTES.md
