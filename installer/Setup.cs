@@ -7,14 +7,14 @@ using System.Windows.Forms;
 using System.Security.Cryptography;
 using System.Diagnostics;
 
-[assembly: System.Reflection.AssemblyTitle("AbletonDeck Setup")]
-[assembly: System.Reflection.AssemblyProduct("AbletonDeck")]
+[assembly: System.Reflection.AssemblyTitle("Wander_scope Setup")]
+[assembly: System.Reflection.AssemblyProduct("Wander_scope")]
 [assembly: System.Reflection.AssemblyDescription("Free Stream Deck audio analysis for Ableton Live")]
-[assembly: System.Reflection.AssemblyVersion("0.3.15.0")]
-[assembly: System.Reflection.AssemblyFileVersion("0.3.15.0")]
+[assembly: System.Reflection.AssemblyVersion("0.3.16.0")]
+[assembly: System.Reflection.AssemblyFileVersion("0.3.16.0")]
 
 public static class DeckSetup {
-    public const string Version="0.3.15";
+    public const string Version="0.3.16";
     public static Dictionary<string,byte[]> Payload() {
         var files=new Dictionary<string,byte[]>();
         using(var stream=typeof(DeckSetup).Assembly.GetManifestResourceStream("AbletonDeck.payload"))
@@ -73,16 +73,16 @@ public static class DeckSetup {
     }
     [STAThread]
     public static int Main(string[] args) {
-        if(args.Length==1&&args[0]=="--verify") {try{Console.WriteLine("AbletonDeck "+Version+": "+Payload().Count+" files verified");return 0;}catch(Exception e){Console.Error.WriteLine(e.Message);return 1;}}
+        if(args.Length==1&&args[0]=="--verify") {try{Console.WriteLine("Wander_scope "+Version+": "+Payload().Count+" files verified");return 0;}catch(Exception e){Console.Error.WriteLine(e.Message);return 1;}}
         Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);Application.Run(new SetupWindow());return 0;
     }
 }
 public class SetupWindow:Form {
     TextBox library;Button install,remove;Label status;
     public SetupWindow(){
-        Text="AbletonDeck Setup · "+DeckSetup.Version;ClientSize=new Size(620,420);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;StartPosition=FormStartPosition.CenterScreen;
+        Text="Wander_scope Setup · "+DeckSetup.Version;ClientSize=new Size(620,420);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;StartPosition=FormStartPosition.CenterScreen;
         BackColor=Color.FromArgb(23,23,23);ForeColor=Color.White;Font=new Font("Segoe UI",10);
-        var title=new Label{Text="AbletonDeck",Location=new Point(24,22),Size=new Size(540,40),Font=new Font("Segoe UI",24,FontStyle.Bold),ForeColor=Color.FromArgb(242,86,35)};Controls.Add(title);
+        var title=new Label{Text="Wander_scope",Location=new Point(24,22),Size=new Size(540,40),Font=new Font("Segoe UI",24,FontStyle.Bold),ForeColor=Color.FromArgb(242,86,35)};Controls.Add(title);
         Controls.Add(new Label{Text="Free audio analysis for Stream Deck + Ableton Live Suite",Location=new Point(26,70),Size=new Size(570,26)});
         Controls.Add(new Label{Text="Ableton User Library",Location=new Point(26,120),Size=new Size(400,24)});
         library=new TextBox{Text=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),"Ableton","User Library"),Location=new Point(26,148),Size=new Size(470,28)};Controls.Add(library);
@@ -97,10 +97,10 @@ public class SetupWindow:Form {
             if(Process.GetProcessesByName("StreamDeck").Length>0)throw new Exception("Close Stream Deck from the system tray, then try again. Your profiles will stay unchanged.");
             string path=library.Text.Trim();if(!Path.IsPathRooted(path)||!Directory.Exists(path))throw new Exception("Select your existing Ableton User Library. Find its path in Live Settings > Library.");
             var roots=DeckSetup.Roots(path,Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData));
-            if(uninstall&&MessageBox.Show("Remove AbletonDeck files from the selected User Library and Stream Deck? Modified files and profiles will be preserved.","AbletonDeck",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;
+            if(uninstall&&MessageBox.Show("Remove Wander_scope files from the selected User Library and Stream Deck? Modified files and profiles will be preserved.","Wander_scope",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;
             install.Enabled=remove.Enabled=false;
-            if(uninstall){int preserved=DeckSetup.Remove(roots);status.Text="Removed. Modified files preserved: "+preserved;}else{DeckSetup.Install(roots);status.Text="Installed. Open Stream Deck and restart Live when your work is saved.";MessageBox.Show("Installed successfully.\n\nOpen Stream Deck and find AbletonDeck actions.\nRestart Live after saving your project.\nAdd User Library > Presets > Audio Effects > Max Audio Effect > AbletonDeck > AbletonDeck Meter.amxd last on Main/Master.\n\nOptional Live controls: Settings > Link, Tempo & MIDI > Control Surface: AbletonDeck; Input/Output: None.\n\nUse one meter device per project.","AbletonDeck",MessageBoxButtons.OK,MessageBoxIcon.Information);}
-        }catch(Exception e){MessageBox.Show(e.Message,"AbletonDeck",MessageBoxButtons.OK,MessageBoxIcon.Error);}
+            if(uninstall){int preserved=DeckSetup.Remove(roots);status.Text="Removed. Modified files preserved: "+preserved;}else{DeckSetup.Install(roots);status.Text="Installed. Open Stream Deck and restart Live when your work is saved.";MessageBox.Show("Installed successfully.\n\nOpen Stream Deck and find Wander_scope actions.\nRestart Live after saving your project.\nAdd User Library > Presets > Audio Effects > Max Audio Effect > AbletonDeck > AbletonDeck Meter.amxd last on Main/Master.\n\nOptional Live controls: Settings > Link, Tempo & MIDI > Control Surface: AbletonDeck; Input/Output: None.\n\nUse one meter device per project.","Wander_scope",MessageBoxButtons.OK,MessageBoxIcon.Information);}
+        }catch(Exception e){MessageBox.Show(e.Message,"Wander_scope",MessageBoxButtons.OK,MessageBoxIcon.Error);}
         finally{install.Enabled=remove.Enabled=true;}
     }
 }
