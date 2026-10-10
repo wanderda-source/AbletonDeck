@@ -1,6 +1,6 @@
 {
   "name": "ableton-deck-personal",
-  "version": "0.3.22",
+  "version": "0.3.23",
   "private": true,
   "description": "Personal Stream Deck controller and Max for Live stereo loudness monitor",
   "scripts": {
