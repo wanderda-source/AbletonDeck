@@ -1,0 +1,13 @@
+node_modules/
+com.personal.abletondeck.sdPlugin/node_modules/
+dist/
+__pycache__/
+*.pyc
+*.log
+runtime-status.json
+fft-diagnostics.json
+meter-connection.json
+.abletondeck-owned
+*.streamDeckPlugin
+*.exe
+payload.zip
