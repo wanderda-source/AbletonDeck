@@ -11,7 +11,7 @@ test('actual plugin process registers, renders audio, sends commands and resets 
   await new Promise(resolve=>control.bind(portBase,'127.0.0.1',resolve));
   await new Promise(resolve=>max.bind(portBase+2,'127.0.0.1',resolve));
   const connected=new Promise(resolve=>server.once('connection',resolve));
-  const process_=spawn(process.execPath,[path.join(__dirname,'../com.personal.abletondeck.sdPlugin/plugin.cjs'),'-port',String(server.address().port),'-pluginUUID','test-uuid','-registerEvent','registerPlugin'],{stdio:'pipe',env:{...process.env,ABLETONDECK_TEST_PORT_BASE:String(portBase)}});
+  const process_=spawn(process.execPath,[path.join(__dirname,'../com.personal.abletondeck.sdPlugin/plugin.cjs'),'-port',String(server.address().port),'-pluginUUID','test-uuid','-registerEvent','registerPlugin','-info',JSON.stringify({devices:[{id:'standard-deck',type:0}]})],{stdio:'pipe',env:{...process.env,ABLETONDECK_TEST_PORT_BASE:String(portBase)}});
   const messages=[];
   let ws;
   try {
@@ -19,8 +19,14 @@ test('actual plugin process registers, renders audio, sends commands and resets 
     ws.on('message',b=>messages.push(JSON.parse(b.toString())));
     await delay(100);
     assert.ok(messages.some(m=>m.event==='registerPlugin'&&m.uuid==='test-uuid'));
+    ws.send(JSON.stringify({event:'didReceiveGlobalSettings',payload:{settings:{}}}));await delay(80);
+    const hud=messages.find(m=>m.event==='switchToProfile');assert.equal(hud.device,'standard-deck');assert.equal(hud.payload.profile,'profiles/Wander_scope HUD');
+    ws.send(JSON.stringify({event:'didReceiveGlobalSettings',payload:{settings:{hudOffered:true}}}));await delay(50);
+    assert.equal(messages.filter(m=>m.event==='switchToProfile').length,1,'HUD offer is not repeated');
     const emit=(event,kind,payload={})=>ws.send(JSON.stringify({event,context:kind,action:'com.personal.abletondeck.'+kind,payload}));
-    emit('willAppear','play',{settings:{}});emit('willAppear','lufs',{settings:{}});
+    ws.send(JSON.stringify({event:'willAppear',context:'play',device:'standard-deck',action:'com.personal.abletondeck.play',payload:{settings:{}}}));emit('willAppear','lufs',{settings:{}});
+    emit('sendToPlugin','play',{type:'openHUD'});await delay(50);
+    assert.equal(messages.filter(m=>m.event==='switchToProfile').length,2,'PI can reopen HUD without adding an action');
     source.send(Buffer.from(JSON.stringify({v:1,type:'state',playing:false,tempo:120,track:{name:'Drums'}})),portBase+1,'127.0.0.1');
     const oscStr=s=>{const b=Buffer.from(s+'\0');return Buffer.concat([b,Buffer.alloc((4-b.length%4)%4)])};
     const floats=Buffer.alloc(14*4);[-12.4,-13.2,-14.1,-1.2,-0.8,0,...Array(8).fill(-25)].forEach((v,j)=>floats.writeFloatBE(v,j*4));
