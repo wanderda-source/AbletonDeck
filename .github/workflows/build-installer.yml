@@ -1,4 +1,4 @@
-name: Build Windows installer
+name: Build and test Windows and macOS
 on:
   workflow_dispatch:
   push:
@@ -7,7 +7,17 @@ permissions:
   contents: read
 jobs:
   build:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: Windows
+          - os: macos-14
+            platform: macOS
+    runs-on: ${{ matrix.os }}
+    env:
+      WANDER_SCOPE_DISABLE_TELEMETRY: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -17,32 +27,67 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Build plugin
+      - name: Build and test Stream Deck and Max integration
+        shell: bash
+        run: |
+          set -e
+          npm ci
+          python -c "import shutil; shutil.copytree('node_modules','com.personal.abletondeck.sdPlugin/node_modules',dirs_exist_ok=True)"
+          python tools/build.py
+          node tools/test.cjs
+          python -m unittest discover -s tests -p 'test_*.py'
+      - name: Fetch pinned MIT VST3 SDK
+        shell: bash
+        run: |
+          set -e
+          git clone --recursive https://github.com/steinbergmedia/vst3sdk.git sdk-source
+          git -C sdk-source checkout 3cdf9ca5d1f5b1b21e0a86832aa4abe55607bd96
+          git -C sdk-source submodule update --init --recursive
+      - name: Build and validate Windows VST3
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          npm ci
-          if ($LASTEXITCODE -ne 0) { throw 'npm ci failed' }
-          Copy-Item node_modules com.personal.abletondeck.sdPlugin -Recurse -Force
-          python tools/build.py
-          if ($LASTEXITCODE -ne 0) { throw 'Plugin build failed' }
-          node tools/test.cjs
-          if ($LASTEXITCODE -ne 0) { throw 'Tests failed' }
+          cmake -S native -B native-build -A x64 "-DVST3_SDK_ROOT=$((Resolve-Path sdk-source).Path)"
+          if ($LASTEXITCODE -ne 0) { throw 'Configure failed' }
+          cmake --build native-build --config Release --parallel 4
+          if ($LASTEXITCODE -ne 0) { throw 'VST3 build or validator failed' }
+          ctest --test-dir native-build -C Release --output-on-failure
+          if ($LASTEXITCODE -ne 0) { throw 'Native tests failed' }
+      - name: Build and validate universal macOS VST3
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -e
+          cmake -S native -B native-build -DCMAKE_BUILD_TYPE=Release -DVST3_SDK_ROOT="$PWD/sdk-source" '-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0
+          cmake --build native-build --config Release --parallel 4
+          ctest --test-dir native-build -C Release --output-on-failure
+          lipo -verify_arch arm64 x86_64 native-build/VST3/Release/Wander_scope.vst3/Contents/MacOS/Wander_scope
+      - name: Stage audio plugin and package Stream Deck plugin
+        shell: bash
+        run: |
+          set -e
+          python tools/stage-vst.py native-build sdk-source
+          npx --yes @elgato/cli pack com.personal.abletondeck.sdPlugin --output dist --force
       - name: Compile Windows setup
+        if: runner.os == 'Windows'
         shell: powershell
         run: .\installer\build.ps1
-      - name: Test installer in isolated folders
+      - name: Test Windows installation in isolated folders
+        if: runner.os == 'Windows'
         shell: powershell
         run: |
-          $taskCompiler = Join-Path ([Runtime.InteropServices.RuntimeEnvironment]::GetRuntimeDirectory()) 'csc.exe'
+          $taskCompiler = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
           $taskSetup = (Get-ChildItem dist -Filter 'Wander_scope-Setup-*.exe').FullName
           & $taskCompiler /nologo /target:exe /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /out:dist\InstallerTests.exe "/reference:$taskSetup" installer\InstallerTests.cs
           if ($LASTEXITCODE -ne 0) { throw 'Installer test compilation failed' }
-          & .\dist\InstallerTests.exe (Join-Path $env:RUNNER_TEMP 'AbletonDeckInstallerTests')
+          & .\dist\InstallerTests.exe (Join-Path $env:RUNNER_TEMP 'WanderScopeInstallerTests')
           if ($LASTEXITCODE -ne 0) { throw 'Installer tests failed' }
+      - name: Package user download
+        shell: bash
+        run: python tools/build-release-zip.py dist '${{ matrix.platform }}'
       - uses: actions/upload-artifact@v4
         with:
-          name: Wander_scope-Windows
+          name: Wander_scope-${{ matrix.platform }}
           path: |
-            dist/Wander_scope-Setup-*.exe
-            dist/SHA256SUMS.txt
-            installer/RELEASE-NOTES.md
+            dist/Wander_scope-${{ matrix.platform }}-*.zip
+            dist/Wander_scope-${{ matrix.platform }}-*.zip.sha256
