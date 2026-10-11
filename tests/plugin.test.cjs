@@ -96,7 +96,7 @@ test('actual plugin process registers, renders audio, sends commands and resets 
     await waitFor(()=>messages.filter(m=>m.event==='switchToProfile').length>spectrumSwitchCount);
     assert.deepEqual(messages.filter(m=>m.event==='switchToProfile').at(-1).payload,{profile:'profiles/Wander_scope Spectrum'});
     for(let y=0;y<3;y++)for(let x=0;x<5;x++)ws.send(JSON.stringify({event:'willAppear',context:`spectrumTile${x}${y}`,device:'standard-deck',action:`com.personal.abletondeck.spectrum${x+1}`,payload:{settings:{expanded:true,tileY:y}}}));
-    await delay(160);
+    await waitFor(()=>Array.from({length:15},(_,j)=>{const x=j%5,y=Math.floor(j/5);return messages.some(m=>m.event==='setImage'&&m.context===`spectrumTile${x}${y}`);}).every(Boolean));
     for(let y=0;y<3;y++)for(let x=0;x<5;x++){
       const image=messages.filter(m=>m.event==='setImage'&&m.context===`spectrumTile${x}${y}`).at(-1).payload.image;
       assert.match(image,/^data:image\/png;base64,/);
@@ -133,7 +133,7 @@ test('actual plugin process registers, renders audio, sends commands and resets 
     await waitFor(()=>messages.filter(m=>m.event==='switchToProfile').length>spectrogramSwitchCount);
     assert.deepEqual(messages.filter(m=>m.event==='switchToProfile').at(-1).payload,{profile:'profiles/Wander_scope Spectrogram'});
     for(let y=0;y<3;y++)for(let x=0;x<5;x++)ws.send(JSON.stringify({event:'willAppear',context:`tile${x}${y}`,device:'standard-deck',action:'com.personal.abletondeck.spectrogram',payload:{settings:{expanded:true,tileX:x,tileY:y}}}));
-    await delay(160);
+    await waitFor(()=>Array.from({length:15},(_,j)=>{const x=j%5,y=Math.floor(j/5);return messages.some(m=>m.event==='setImage'&&m.context===`tile${x}${y}`);}).every(Boolean));
     for(let y=0;y<3;y++)for(let x=0;x<5;x++){
       const image=messages.filter(m=>m.event==='setImage'&&m.context===`tile${x}${y}`).at(-1).payload.image;
       assert.match(image,/^data:image\/png;base64,/);const png=Buffer.from(image.split(',')[1],'base64');assert.equal(png.readUInt32BE(16),72);assert.equal(png.readUInt32BE(20),72);
