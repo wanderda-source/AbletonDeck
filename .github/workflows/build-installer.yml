@@ -52,10 +52,14 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          cmake -S native -B native-build -A x64 "-DVST3_SDK_ROOT=$((Resolve-Path sdk-source).Path)"
+          cmake -S native -B native-build -A x64 -DSMTG_RUN_VST_VALIDATOR=OFF "-DVST3_SDK_ROOT=$((Resolve-Path sdk-source).Path)"
           if ($LASTEXITCODE -ne 0) { throw 'Configure failed' }
           cmake --build native-build --config Release --parallel 4
           if ($LASTEXITCODE -ne 0) { throw 'VST3 build or validator failed' }
+          & .\native-build\bin\Release\validator.exe .\native-build\VST3\Release\Wander_scope.vst3 *> native-validator.log
+          $taskValidatorExit = $LASTEXITCODE
+          Get-Content native-validator.log
+          if ($taskValidatorExit -ne 0) { throw 'VST3 validator failed' }
           ctest --test-dir native-build -C Release --output-on-failure
           if ($LASTEXITCODE -ne 0) { throw 'Native tests failed' }
       - name: Build and validate universal macOS VST3
